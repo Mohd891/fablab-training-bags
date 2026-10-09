@@ -86,43 +86,75 @@ $('newBagTop').onclick=newBag;$('startBag').onclick=newBag;$('newBagList').oncli
 document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>setPage(b.dataset.page));document.querySelectorAll('[data-page-jump]').forEach(b=>b.onclick=()=>setPage(b.dataset.pageJump));
 document.querySelectorAll('.section-tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.section-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.editor-section').forEach(x=>x.classList.remove('active'));document.querySelector(`[data-section-panel="${b.dataset.section}"]`).classList.add('active')});
 async function openBag(id){const {data:bag,error}=await db.from('training_bags').select('*').eq('id',id).single();if(error)return toast('تعذر فتح الحقيبة','error');currentBagId=id;clearForm();resetState();const {data:pd}=await db.from('program_details').select('*').eq('bag_id',id).maybeSingle();fillForm({...bag,...(pd||{})});const [{data:obj},{data:out},{data:days},{data:human},{data:mat},{data:ready}]=await Promise.all([db.from('objectives').select('*').eq('bag_id',id).order('objective_no'),db.from('outputs').select('*').eq('bag_id',id).order('output_no'),db.from('implementation_days').select('*').eq('bag_id',id).order('day_no'),db.from('human_resources').select('*').eq('bag_id',id),db.from('material_resources').select('*').eq('bag_id',id),db.from('readiness_items').select('*').eq('bag_id',id)]);state.objectives=obj||[];state.outputs=(out||[]).map(o=>({...o,measurement:{what_to_measure:'',required_result:'',verification_method:''}}));for(const o of state.outputs){const {data:m}=await db.from('output_measurements').select('*').eq('output_id',o.id).maybeSingle();if(m)o.measurement=m}state.days=days||[];state.human=human||[];state.material=mat||[];state.readiness=ready?.length?ready:state.readiness;renderAll();$('editorMode').textContent='تعديل حقيبة';$('editorTitle').textContent=bag.name;$('editorSubtitle').textContent='استكمل من آخر مكان وصلت إليه ثم احفظ.';setPage('editor')}
-async function saveBag(){if(!currentUser)return;const name=val('f_name');if(!name)return toast('اسم البرنامج مطلوب','error');if(!window.departments?.length){return toast('لا يوجد قسم مضاف في النظام بعد','error')}const departmentId=$('f_department')?.value;if(!departmentId)return toast('اختر القسم أولاً','error');localStorage.setItem('selectedDepartmentId',departmentId);const bagStatusMap={draft:'draft',review:'submitted',completed:'approved'};let payload={name,department_id:departmentId,owner_id:currentUser.id,status:bagStatusMap[$('reviewStatus').value]||'draft',completion_percent:parseInt($('editorProgress').textContent)||0};if(currentBagId){const {error}=await db.from('training_bags').update(payload).eq('id',currentBagId);if(error)return toast(error.message,'error')}else{const {data,error}=await db.from('training_bags').insert(payload).select('id').single();if(error)return toast(error.message,'error');currentBagId=data.id}
-const pd=formData();pd.bag_id=currentBagId;await db.from('program_details').upsert(pd,{onConflict:'bag_id'});await db.from('objectives').delete().eq('bag_id',currentBagId);if(state.objectives.length)await db.from('objectives').insert(state.objectives.map(o=>({bag_id:currentBagId,objective_no:o.objective_no,text:o.text})));await db.from('outputs').delete().eq('bag_id',currentBagId);if(state.outputs.length){const ins=await db.from('outputs').insert(state.outputs.map(o=>({bag_id:currentBagId,output_no:o.output_no,name:o.name,output_type:o.output_type,description:o.description,quantity:o.quantity?Number(o.quantity):null,ownership:o.ownership}))).select();if(ins.data){await db.from('output_measurements').delete().in('output_id',ins.data.map(x=>x.id));const ms=ins.data.map((x,i)=>({output_id:x.id,...state.outputs[i].measurement}));if(ms.length)await db.from('output_measurements').insert(ms)}}await db.from('implementation_days').delete().eq('bag_id',currentBagId);if(state.days.length)await db.from('implementation_days').insert(state.days.map(d=>({...d,bag_id:currentBagId})));await db.from('human_resources').delete().eq('bag_id',currentBagId);if(state.human.length)await db.from('human_resources').insert(state.human.map(h=>({...h,bag_id:currentBagId,quantity:h.quantity===''?null:Number(h.quantity)})));await db.from('material_resources').delete().eq('bag_id',currentBagId);if(state.material.length)await db.from('material_resources').insert(state.material.map(m=>({...m,bag_id:currentBagId,quantity_per_person_group:m.quantity_per_person_group===''?null:Number(m.quantity_per_person_group),total_quantity:m.total_quantity===''?null:Number(m.total_quantity)})));await db.from('readiness_items').delete().eq('bag_id',currentBagId);if(state.readiness.length)await db.from('readiness_items').insert(state.readiness.map(r=>({...r,bag_id:currentBagId})));const reviewMap={draft:'draft',review:'submitted',completed:'approved'};const reviewStatus=reviewMap[$('reviewStatus').value]||'draft';await db.from('reviews').insert({bag_id:currentBagId,reviewer_id:currentUser.id,review_type:'general',status:reviewStatus,comments:$('reviewComment').value,reviewed_at:new Date().toISOString()});toast('تم حفظ الحقيبة بنجاح');await loadBags();$('editorMode').textContent='تم الحفظ';}
-$('saveBag').onclick=saveBag;
+let saving=false;
+async function saveBag({silent=false}={}){if(!currentUser||saving)return;const toast=silent?()=>{}:window.toast;saving=true;try{const name=val('f_name');if(!name)return toast('اسم البرنامج مطلوب','error');if(!window.departments?.length){return toast('لا يوجد قسم مضاف في النظام بعد','error')}const departmentId=$('f_department')?.value;if(!departmentId)return toast('اختر القسم أولاً','error');localStorage.setItem('selectedDepartmentId',departmentId);const bagStatusMap={draft:'draft',review:'submitted',completed:'approved'};let payload={name,department_id:departmentId,owner_id:currentUser.id,status:bagStatusMap[$('reviewStatus').value]||'draft',completion_percent:parseInt($('editorProgress').textContent)||0};if(currentBagId){const {error}=await db.from('training_bags').update(payload).eq('id',currentBagId);if(error)return toast(error.message,'error')}else{const {data,error}=await db.from('training_bags').insert(payload).select('id').single();if(error)return toast(error.message,'error');currentBagId=data.id}
+const pd=formData();pd.bag_id=currentBagId;await db.from('program_details').upsert(pd,{onConflict:'bag_id'});await db.from('objectives').delete().eq('bag_id',currentBagId);if(state.objectives.length)await db.from('objectives').insert(state.objectives.map(o=>({bag_id:currentBagId,objective_no:o.objective_no,text:o.text})));await db.from('outputs').delete().eq('bag_id',currentBagId);if(state.outputs.length){const ins=await db.from('outputs').insert(state.outputs.map(o=>({bag_id:currentBagId,output_no:o.output_no,name:o.name,output_type:o.output_type,description:o.description,quantity:o.quantity?Number(o.quantity):null,ownership:o.ownership}))).select();if(ins.data){await db.from('output_measurements').delete().in('output_id',ins.data.map(x=>x.id));const ms=ins.data.map((x,i)=>({output_id:x.id,...state.outputs[i].measurement}));if(ms.length)await db.from('output_measurements').insert(ms)}}await db.from('implementation_days').delete().eq('bag_id',currentBagId);if(state.days.length)await db.from('implementation_days').insert(state.days.map(d=>({...d,bag_id:currentBagId})));await db.from('human_resources').delete().eq('bag_id',currentBagId);if(state.human.length)await db.from('human_resources').insert(state.human.map(h=>({...h,bag_id:currentBagId,quantity:h.quantity===''?null:Number(h.quantity)})));await db.from('material_resources').delete().eq('bag_id',currentBagId);if(state.material.length)await db.from('material_resources').insert(state.material.map(m=>({...m,bag_id:currentBagId,quantity_per_person_group:m.quantity_per_person_group===''?null:Number(m.quantity_per_person_group),total_quantity:m.total_quantity===''?null:Number(m.total_quantity)})));await db.from('readiness_items').delete().eq('bag_id',currentBagId);if(state.readiness.length)await db.from('readiness_items').insert(state.readiness.map(r=>({...r,bag_id:currentBagId})));const reviewMap={draft:'draft',review:'submitted',completed:'approved'};const reviewStatus=reviewMap[$('reviewStatus').value]||'draft';await db.from('reviews').insert({bag_id:currentBagId,reviewer_id:currentUser.id,review_type:'general',status:reviewStatus,comments:$('reviewComment').value,reviewed_at:new Date().toISOString()});toast('تم حفظ الحقيبة بنجاح');await loadBags();$('editorMode').textContent='تم الحفظ';}finally{saving=false}}
+$('saveBag').onclick=()=>saveBag();
+/* ---------- Excel export (fills the official template, keeps its formatting) ---------- */
+const TEMPLATE_URL='assets/training-bag-template.xlsx?v=20261009';
+const TEMPLATE_SHEET='قالب الحقيبة';
+const XLSX_MIME='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const TEMPLATE_LIMITS={outputs:5,days:8,human:3,material:7};
+const FIELD_CELLS={name:'A6',description:'A7',program_type:'A8',primary_field:'A9',devices_software:'A11',level:'A13',practical_application_type:'A14',target_audience:'A17',participant_count:'A18',participant_split:'A19',admission_requirements:'A20',scientific_content_author:'A21',version:'A22',consumables_cost:'A23',setup_cost:'A24',other_considerations:'A25'};
+const ATTACHMENT_FIRST_ROW=90;
+async function loadTemplate(){
+  const res=await fetch(TEMPLATE_URL,{cache:'no-store'});
+  const type=(res.headers.get('content-type')||'').toLowerCase();
+  if(!res.ok||type.includes('text/html'))throw new Error('تعذر تحميل قالب Excel الأصلي. لم يتم إنشاء ملف بديل.');
+  const wb=new ExcelJS.Workbook();
+  await wb.xlsx.load(await res.arrayBuffer());
+  return wb;
+}
+function fillTemplate(ws){
+  const set=(addr,v)=>{if(v!==null&&v!==undefined&&v!=='')ws.getCell(addr).value=v};
+  const row=(r,cols)=>Object.entries(cols).forEach(([col,v])=>set(col+r,v));
+  const pd={name:val('f_name'),...formData()};
+  const lineCount=text=>String(text).split('\n').length;
+  set('A5',$('f_department')?.selectedOptions?.[0]?.text);
+  Object.entries(FIELD_CELLS).forEach(([key,addr])=>set(addr,pd[key]));
+  set('A10',pd.supporting_fields.join(', '));
+  const objectives=state.objectives.map((o,i)=>`${i+1}. ${o.text}`).join('\n');
+  set('A12',objectives);
+  if(objectives)ws.getRow(12).height=Math.max(ws.getRow(12).height||0,lineCount(objectives)*18);
+  set('A15',`${pd.duration_days??''} يوم / ${pd.duration_hours??''} ساعة`);
+  set('A16',`${pd.age_min??''} - ${pd.age_max??''}`);
+  state.outputs.slice(0,TEMPLATE_LIMITS.outputs).forEach((o,i)=>{
+    const m=o.measurement||{};
+    row(30+i,{F:o.output_no,E:o.name,D:o.output_type,C:o.description,B:o.quantity===''?'':Number(o.quantity),A:o.ownership});
+    row(38+i,{D:`${o.output_no} - ${o.name}`,C:m.what_to_measure,B:m.required_result,A:m.verification_method});
+  });
+  state.days.slice(0,TEMPLATE_LIMITS.days).forEach((d,i)=>row(53+i,{G:d.day_no,F:d.what_to_learn,E:d.topics,D:d.objective_ids.map(x=>Number(x)+1).join(', '),C:d.output_ids.join(', '),B:d.execution_duration,A:d.verification}));
+  state.human.slice(0,TEMPLATE_LIMITS.human).forEach((h,i)=>row(65+i,{D:h.resource_type,C:h.quantity===''?'':Number(h.quantity),B:h.requirements,A:h.responsibilities}));
+  state.material.slice(0,TEMPLATE_LIMITS.material).forEach((m,i)=>row(70+i,{F:m.item,E:m.specifications,D:m.unit,C:m.quantity_per_person_group,B:m.total_quantity,A:m.notes}));
+  state.readiness.forEach((r,i)=>row(79+i,{C:r.category,B:r.preparation_requirements,A:r.lead_time}));
+  attachmentDefs.forEach(([key],i)=>set('A'+(ATTACHMENT_FIRST_ROW+i),state.attachments[key]?.name));
+}
 async function exportExcel(){
   if(!currentBagId)return toast('احفظ الحقيبة أولاً','error');
   const status=$('exportStatus');status.textContent='جاري تجهيز ملف Excel...';
   try{
-    let buf=null;
-    const r=await fetch('assets/training-bag-template.xlsx?v=20260912-8',{cache:'no-store'});
-    if(r.ok){
-      const type=(r.headers.get('content-type')||'').toLowerCase();
-      if(!type.includes('text/html')) buf=await r.arrayBuffer();
-    }
-    if(!buf)throw new Error('تعذر تحميل قالب Excel الأصلي. لم يتم إنشاء ملف بديل.');
-    const wb=XLSX.read(buf,{type:'array',cellStyles:true,cellNF:true,cellHTML:true});
-    const ws=wb.Sheets['قالب الحقيبة'];
+    const wb=await loadTemplate();
+    const ws=wb.getWorksheet(TEMPLATE_SHEET);
     if(!ws)throw new Error('ورقة قالب الحقيبة غير موجودة.');
-    const set=(cell,v)=>{if(v===null||v===undefined||v==='')return;const c=ws[cell]||(ws[cell]={});c.t='s';c.v=String(v)};
-    set('A1','قالب الحقيبة التدريبية - فاب لاب الأحساء');
-    const f={name:'A6',description:'A7',program_type:'A8',primary_field:'A9',supporting_fields:'A10',devices_software:'A11',level:'A13',practical_application_type:'A14',target_audience:'A17',participant_count:'A18',participant_split:'A19',admission_requirements:'A20',scientific_content_author:'A21',version:'A22',consumables_cost:'A23',setup_cost:'A24',other_considerations:'A25'};
-    const pd=formData();
-    set('A5',$('f_department')?.selectedOptions?.[0]?.text||'');
-    Object.entries(f).forEach(([k,c])=>set(c,k==='supporting_fields'?pd[k].join(', '):pd[k]));
-    set('A12',state.objectives.map((o,i)=>String(i+1)+'. '+o.text).join(String.fromCharCode(10)));
-    set('A15',`${pd.duration_days??''} يوم / ${pd.duration_hours??''} ساعة`);
-    set('A16',`${pd.age_min??''} - ${pd.age_max??''}`);
-    state.outputs.forEach((o,i)=>{const r=30+i;set(`F${r}`,o.output_no);set(`E${r}`,o.name);set(`D${r}`,o.output_type);set(`C${r}`,o.description);set(`B${r}`,o.quantity);set(`A${r}`,o.ownership)});
-    state.days.forEach((d,i)=>{const r=53+i;set(`G${r}`,d.day_no);set(`F${r}`,d.what_to_learn);set(`E${r}`,d.topics);set(`D${r}`,d.objective_ids.map(x=>Number(x)+1).join(', '));set(`C${r}`,d.output_ids.join(', '));set(`B${r}`,d.execution_duration);set(`A${r}`,d.verification)});
-    state.human.slice(0,3).forEach((h,i)=>{const r=65+i;set(`D${r}`,h.resource_type);set(`C${r}`,h.quantity);set(`B${r}`,h.requirements);set(`A${r}`,h.responsibilities)});
-    state.material.forEach((m,i)=>{const r=70+i;set(`F${r}`,m.item);set(`E${r}`,m.specifications);set(`D${r}`,m.unit);set(`C${r}`,m.quantity_per_person_group);set(`B${r}`,m.total_quantity);set(`A${r}`,m.notes)});
-    state.readiness.forEach((r,i)=>{const row=79+i;set(`C${row}`,r.category);set(`B${row}`,r.preparation_requirements);set(`A${row}`,r.lead_time)});
-    const wbout=XLSX.write(wb,{bookType:'xlsx',type:'array',cellStyles:true,bookSST:false});
-    const blob=new Blob([wbout],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(val('f_name')||'الحقيبة التدريبية')+'.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    fillTemplate(ws);
+    const blob=new Blob([await wb.xlsx.writeBuffer()],{type:XLSX_MIME});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=(val('f_name')||'الحقيبة التدريبية').replace(/[\\/:*?"<>|]/g,'-').slice(0,80)+'.xlsx';
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
     status.textContent='تم تجهيز ملف Excel بالقالب الأصلي.';
   }catch(e){status.textContent='تعذر التصدير: '+e.message;toast('تعذر التصدير: '+e.message,'error')}
 }
-
 $('exportExcel').onclick=exportExcel;
+
+/* ---------- Auto-save (debounced, silent) ---------- */
+let autoSaveTimer=null;
+function scheduleAutoSave(){
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer=setTimeout(()=>{if(!$('page-editor').classList.contains('hidden'))saveBag({silent:true})},900);
+}
+['input','change'].forEach(type=>document.addEventListener(type,e=>{if(e.target.closest('#page-editor'))scheduleAutoSave()},true));
+document.addEventListener('click',e=>{if(e.target.closest('#addObjective,#addOutput,#addDay,#addHuman,#addMaterial,.danger'))scheduleAutoSave()},true);
+
 setupAuth();init();
