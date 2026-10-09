@@ -14,3 +14,12 @@
 @media (max-width:600px){
   html body .app-shell .sidebar nav{width:calc(100% - 104px)!important;flex-basis:calc(100% - 104px)!important;}
 }
+
+/* Desktop: sidebar on the right (RTL) */
+@media (min-width:901px){
+  .sidebar{inset:0 0 0 auto}
+  .main-content{margin-left:0;margin-right:250px}
+}
+@media (min-width:901px) and (max-width:1300px){
+  .main-content{margin-right:220px}
+}
