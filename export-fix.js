@@ -36,26 +36,234 @@ html,body{width:100%!important;max-width:100%!important;overflow-x:hidden!import
     setInterval(silentSave,5000);
   };
   const clean=s=>String(s??'').replace(/\s+/g,' ').trim();
-  const valueOf=c=>{if(!c)return '';if(c.tagName==='SELECT')return Array.from(c.selectedOptions).map(o=>clean(o.textContent)).join(', ');if(c.type==='checkbox')return c.checked?'نعم':'';if(c.type==='file')return c.files?.[0]?.name||'';return c.value??'';};
-  const labelTitle=label=>{const clone=label.cloneNode(true);clone.querySelectorAll('input,textarea,select,button').forEach(x=>x.remove());return clean(clone.textContent);};
-  const exportWorkbook=()=>{
-    try{
-      if(typeof XLSX==='undefined')throw new Error('مكتبة Excel غير محملة.');
-      const ed=$('page-editor');if(!ed)throw new Error('محرر الحقيبة غير موجود.');
-      const rows=[['قالب الحقيبة التدريبية - فاب لاب الأحساء'],[]];
-      const add=(title,value)=>{if(clean(value)!=='')rows.push([title,String(value)]);};
-      ed.querySelectorAll('label').forEach(label=>{const c=label.querySelector('input,textarea,select');const t=labelTitle(label);if(c&&t)add(t,valueOf(c));});
-      let appState={};try{appState=(typeof state!=='undefined'&&state)||{};}catch(_){appState={};}
-      if(Array.isArray(appState.objectives)&&appState.objectives.length){rows.push([],['الأهداف']);appState.objectives.forEach((o,i)=>{if(clean(o?.text))rows.push([`الهدف ${i+1}`,clean(o.text)]);});}
-      const section=(title,items)=>{if(!Array.isArray(items)||!items.length)return;rows.push([],[title]);items.forEach((item,i)=>{rows.push([`${title} ${i+1}`]);Object.entries(item||{}).forEach(([key,val])=>{if(['id','bag_id','created_at','updated_at'].includes(key)||key==='is_ready')return;if(key==='measurement'&&val&&typeof val==='object'){Object.entries(val).forEach(([mk,mv])=>{if(clean(mv))rows.push([mk,clean(mv)]);});return;}if(Array.isArray(val)){if(val.length)rows.push([key,val.map(x=>typeof x==='object'?JSON.stringify(x):x).join(', ')]);return;}if(val!==null&&val!==undefined&&val!==false&&clean(val)!=='')rows.push([key,typeof val==='object'?JSON.stringify(val):String(val)]);});rows.push([]);});};
-      section('المخرجات وتسليماتها',appState.outputs);section('خطة التنفيذ',appState.days);section('الموارد البشرية',appState.human);section('الاحتياجات المادية والتقنية',appState.material);
-      if(Array.isArray(appState.readiness)&&appState.readiness.length){rows.push([],['متطلبات الجاهزية قبل التنفيذ']);appState.readiness.forEach((r,i)=>{const category=clean(r?.category)||`متطلب الجاهزية ${i+1}`;rows.push([category]);if(r?.preparation_requirements)rows.push(['ما يجب تجهيزه أو التحقق منه',clean(r.preparation_requirements)]);if(r?.lead_time)rows.push(['المدة اللازمة قبل التنفيذ',clean(r.lead_time)]);if(r?.notes)rows.push(['ملاحظات',clean(r.notes)]);if(r?.is_ready===true)rows.push(['الجاهزية','نعم']);rows.push([]);});}
-      const attachmentEntries=Object.entries(appState.attachments||{}).filter(([,f])=>f);if(attachmentEntries.length){rows.push([],['المرفقات']);attachmentEntries.forEach(([key,f])=>rows.push([key,f?.name||String(f)]));}
-      const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:42},{wch:75}];ws['!rtl']=true;Object.keys(ws).forEach(k=>{if(k[0]!=='!')ws[k].s={alignment:{wrapText:true,vertical:'top',horizontal:'right'}};});
-      const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'قالب الحقيبة');const safeName=clean($('f_name')?.value||'الحقيبة التدريبية').replace(/[\\/:*?"<>|]/g,'-').slice(0,80);const data=XLSX.write(wb,{bookType:'xlsx',type:'array'});const blob=new Blob([data],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=safeName+'.xlsx';a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);const status=$('exportStatus');if(status)status.textContent='تم تصدير جميع البيانات المدخلة.';
-    }catch(err){console.error(err);const status=$('exportStatus');if(status)status.textContent='تعذر التصدير: '+(err?.message||err);}
+
+  const ATTACHMENT_LABELS={
+    pre_post:'الاختبار القبلي والبعدي',
+    scientific_content:'المحتوى العلمي التدريبي',
+    presentation:'العرض التقديمي',
+    technical_outputs:'ملفات المخرجات التقنية',
+    student_guide:'دليل الطالب',
+    reference_guide:'الدليل العلمي المرجعي للطالب',
+    assessment:'نموذج تقييم التطبيقات والمخرجات',
+    satisfaction:'استبانة رضا المستفيد'
   };
-  const bind=()=>{const b=$('exportExcel');if(b)b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();exportWorkbook();},true);};
+
+  const FIELD_MAP=[
+    ['f_name','اسم البرنامج التدريبي'],
+    ['__department','القسم'],
+    ['f_program_type','نوع البرنامج'],
+    ['f_description','وصف البرنامج التدريبي'],
+    ['f_primary_field','المجال الأساسي'],
+    ['f_supporting_fields','المجالات المساندة'],
+    ['f_devices_software','الأجهزة والبرامج'],
+    ['f_level','المستوى'],
+    ['f_practical','نوع التطبيق العملي'],
+    ['f_days','عدد الأيام'],
+    ['f_hours','إجمالي الساعات'],
+    ['f_age_min','العمر الأدنى'],
+    ['f_age_max','العمر الأعلى'],
+    ['f_target','الفئة المستهدفة'],
+    ['f_participants','عدد المشاركين'],
+    ['f_split','تقسيم المشاركين'],
+    ['f_requirements','شروط الالتحاق'],
+    ['f_author','مُعدّ المحتوى العلمي'],
+    ['f_version','رقم الإصدار وتاريخ التحديث'],
+    ['f_consumables','تكلفة المستهلكات'],
+    ['f_setup','تكلفة تأسيسية غير متكررة'],
+    ['f_other','اعتبارات أخرى']
+  ];
+
+  const HEADER_FILL='FF4F7B5C';
+  const ZEBRA_FILL='FFF7F9F7';
+
+  const styleHeaderRow=row=>{
+    row.eachCell(cell=>{
+      cell.font={bold:true,color:{argb:'FFFFFFFF'}};
+      cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:HEADER_FILL}};
+      cell.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+    });
+    row.height=22;
+  };
+
+  const zebraRows=(ws,fromRow,toRow)=>{
+    for(let r=fromRow;r<=toRow;r++){
+      if((r-fromRow)%2===1){
+        ws.getRow(r).eachCell(cell=>{cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:ZEBRA_FILL}}});
+      }
+    }
+  };
+
+  const rightAlignBody=(ws,fromRow,toRow)=>{
+    for(let r=fromRow;r<=toRow;r++){
+      ws.getRow(r).eachCell(cell=>{cell.alignment={horizontal:'right',vertical:'top',wrapText:true}});
+    }
+  };
+
+  const exportWorkbook=async()=>{
+    const status=$('exportStatus');
+    try{
+      if(typeof ExcelJS==='undefined')throw new Error('مكتبة ExcelJS غير محمّلة.');
+      let appState={};
+      try{appState=(typeof state!=='undefined'&&state)||{};}catch(_){appState={};}
+      if(status)status.textContent='جاري تجهيز ملف Excel...';
+
+      const wb=new ExcelJS.Workbook();
+      wb.creator='فاب لاب الأحساء';
+      wb.created=new Date();
+
+      // ---- Sheet 1: بطاقة البرنامج ----
+      const info=wb.addWorksheet('بطاقة البرنامج',{views:[{rightToLeft:true}]});
+      info.columns=[{header:'الحقل',key:'k',width:28},{header:'القيمة',key:'v',width:60}];
+      styleHeaderRow(info.getRow(1));
+      FIELD_MAP.forEach(([id,label])=>{
+        let v='';
+        if(id==='__department')v=$('f_department')?.selectedOptions?.[0]?.textContent||'';
+        else{const el=$(id);v=el?el.value.trim():'';}
+        info.addRow({k:label,v});
+      });
+      const reviewStatusText={draft:'مسودة',review:'قيد المراجعة',completed:'مكتملة'}[$('reviewStatus')?.value]||'مسودة';
+      info.addRow({k:'حالة المراجعة',v:reviewStatusText});
+      info.addRow({k:'ملاحظات المراجعة',v:clean($('reviewComment')?.value)});
+      rightAlignBody(info,2,info.rowCount);
+      zebraRows(info,2,info.rowCount);
+
+      if(Array.isArray(appState.objectives)&&appState.objectives.length){
+        info.addRow([]);
+        const h=info.addRow(['أهداف البرنامج']);
+        h.font={bold:true};
+        appState.objectives.forEach((o,i)=>{
+          if(clean(o?.text))info.addRow([`الهدف ${i+1}`,clean(o.text)]);
+        });
+      }
+
+      // ---- Sheet 2: المخرجات ----
+      if(Array.isArray(appState.outputs)&&appState.outputs.length){
+        const ws=wb.addWorksheet('المخرجات',{views:[{rightToLeft:true,state:'frozen',ySplit:1}]});
+        ws.columns=[
+          {header:'رقم المخرج',key:'no',width:12},
+          {header:'اسم المخرج',key:'name',width:28},
+          {header:'النوع',key:'type',width:16},
+          {header:'الوصف',key:'desc',width:40},
+          {header:'العدد',key:'qty',width:10},
+          {header:'الملكية',key:'own',width:16},
+          {header:'ما سيتم قياسه',key:'measure',width:30},
+          {header:'النتيجة المطلوبة',key:'result',width:30},
+          {header:'طريقة التحقق',key:'verify',width:30}
+        ];
+        styleHeaderRow(ws.getRow(1));
+        appState.outputs.forEach(o=>{
+          ws.addRow({
+            no:o.output_no,name:o.name||'',type:o.output_type||'',desc:o.description||'',
+            qty:o.quantity||'',own:o.ownership||'',
+            measure:o.measurement?.what_to_measure||'',
+            result:o.measurement?.required_result||'',
+            verify:o.measurement?.verification_method||''
+          });
+        });
+        rightAlignBody(ws,2,ws.rowCount);
+        zebraRows(ws,2,ws.rowCount);
+      }
+
+      // ---- Sheet 3: خطة التنفيذ ----
+      if(Array.isArray(appState.days)&&appState.days.length){
+        const ws=wb.addWorksheet('خطة التنفيذ',{views:[{rightToLeft:true,state:'frozen',ySplit:1}]});
+        ws.columns=[
+          {header:'اليوم',key:'day',width:10},
+          {header:'ماذا سنتعلم',key:'learn',width:36},
+          {header:'المحاور',key:'topics',width:36},
+          {header:'الأهداف المرتبطة',key:'obj',width:24},
+          {header:'المخرجات المرتبطة',key:'out',width:24},
+          {header:'مدة التنفيذ',key:'dur',width:16},
+          {header:'التحقق',key:'verify',width:24}
+        ];
+        styleHeaderRow(ws.getRow(1));
+        appState.days.forEach(d=>{
+          const objLabels=(d.objective_ids||[]).map(x=>Number(x)+1).join('، ');
+          const outLabels=(d.output_ids||[]).join('، ');
+          ws.addRow({day:d.day_no,learn:d.what_to_learn||'',topics:d.topics||'',obj:objLabels,out:outLabels,dur:d.execution_duration||'',verify:d.verification||''});
+        });
+        rightAlignBody(ws,2,ws.rowCount);
+        zebraRows(ws,2,ws.rowCount);
+      }
+
+      // ---- Sheet 4: الموارد البشرية ----
+      if(Array.isArray(appState.human)&&appState.human.length){
+        const ws=wb.addWorksheet('الموارد البشرية',{views:[{rightToLeft:true,state:'frozen',ySplit:1}]});
+        ws.columns=[
+          {header:'المورد البشري',key:'type',width:24},
+          {header:'العدد',key:'qty',width:10},
+          {header:'الخبرة/الشروط المطلوبة',key:'req',width:36},
+          {header:'المهام',key:'resp',width:36}
+        ];
+        styleHeaderRow(ws.getRow(1));
+        appState.human.forEach(h=>ws.addRow({type:h.resource_type||'',qty:h.quantity??'',req:h.requirements||'',resp:h.responsibilities||''}));
+        rightAlignBody(ws,2,ws.rowCount);
+        zebraRows(ws,2,ws.rowCount);
+      }
+
+      // ---- Sheet 5: الاحتياجات المادية والتقنية ----
+      if(Array.isArray(appState.material)&&appState.material.length){
+        const ws=wb.addWorksheet('الاحتياجات المادية',{views:[{rightToLeft:true,state:'frozen',ySplit:1}]});
+        ws.columns=[
+          {header:'الاحتياج',key:'item',width:26},
+          {header:'الوحدة',key:'unit',width:12},
+          {header:'المواصفات',key:'spec',width:36},
+          {header:'الكمية للفرد/المجموعة',key:'qpp',width:18},
+          {header:'الكمية الإجمالية',key:'total',width:16},
+          {header:'ملاحظات',key:'notes',width:30}
+        ];
+        styleHeaderRow(ws.getRow(1));
+        appState.material.forEach(m=>ws.addRow({item:m.item||'',unit:m.unit||'',spec:m.specifications||'',qpp:m.quantity_per_person_group??'',total:m.total_quantity??'',notes:m.notes||''}));
+        rightAlignBody(ws,2,ws.rowCount);
+        zebraRows(ws,2,ws.rowCount);
+      }
+
+      // ---- Sheet 6: الجاهزية ----
+      if(Array.isArray(appState.readiness)&&appState.readiness.length){
+        const ws=wb.addWorksheet('الجاهزية',{views:[{rightToLeft:true,state:'frozen',ySplit:1}]});
+        ws.columns=[
+          {header:'البند',key:'cat',width:22},
+          {header:'جاهز؟',key:'ready',width:10},
+          {header:'ما يجب تجهيزه/التحقق منه',key:'prep',width:40},
+          {header:'المدة اللازمة قبل التنفيذ',key:'lead',width:20},
+          {header:'ملاحظات',key:'notes',width:30}
+        ];
+        styleHeaderRow(ws.getRow(1));
+        appState.readiness.forEach(r=>ws.addRow({cat:r.category||'',ready:r.is_ready?'نعم':'لا',prep:r.preparation_requirements||'',lead:r.lead_time||'',notes:r.notes||''}));
+        rightAlignBody(ws,2,ws.rowCount);
+        zebraRows(ws,2,ws.rowCount);
+      }
+
+      // ---- Sheet 7: المرفقات ----
+      const attachmentEntries=Object.entries(appState.attachments||{}).filter(([,f])=>f);
+      if(attachmentEntries.length){
+        const ws=wb.addWorksheet('المرفقات',{views:[{rightToLeft:true,state:'frozen',ySplit:1}]});
+        ws.columns=[{header:'نوع المرفق',key:'type',width:30},{header:'اسم الملف',key:'file',width:40}];
+        styleHeaderRow(ws.getRow(1));
+        attachmentEntries.forEach(([key,f])=>ws.addRow({type:ATTACHMENT_LABELS[key]||key,file:f?.name||String(f)}));
+        rightAlignBody(ws,2,ws.rowCount);
+        zebraRows(ws,2,ws.rowCount);
+      }
+
+      const buf=await wb.xlsx.writeBuffer();
+      const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      const safeName=clean($('f_name')?.value||'الحقيبة التدريبية').replace(/[\\/:*?"<>|]/g,'-').slice(0,80);
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;a.download=safeName+'.xlsx';a.style.display='none';
+      document.body.appendChild(a);a.click();
+      setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);
+      if(status)status.textContent='تم تصدير الحقيبة بشكل منظم.';
+    }catch(err){
+      console.error(err);
+      if(status)status.textContent='تعذر التصدير: '+(err?.message||err);
+    }
+  };
+
+  const bind=()=>{
+    const b=$('exportExcel');
+    if(b)b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();exportWorkbook();},true);
+  };
   const start=()=>{bindAutoSave();bind();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
