@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FABY Keeper</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237b2ff7'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <div class="overlay" id="overlay"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="brand" data-go="home">
+      <svg viewBox="0 0 100 100" width="38" height="38"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7b2ff7"/><stop offset="1" stop-color="#00d2ff"/></linearGradient></defs><rect width="100" height="100" rx="22" fill="url(#g)"/><rect x="28" y="18" width="44" height="52" rx="6" fill="none" stroke="#fff" stroke-width="5"/><circle cx="50" cy="42" r="8" fill="none" stroke="#fff" stroke-width="4"/><rect x="47" y="48" width="6" height="12" rx="2" fill="#fff"/><rect x="22" y="72" width="56" height="12" rx="4" fill="rgba(255,255,255,.35)"/></svg>
+      <div><b>FABY</b><small>Keeper</small></div>
+    </div>
+    <div class="search"><input id="globalSearch" placeholder="البحث في كل شيء..." autocomplete="off"><div class="results" id="globalResults" hidden></div></div>
+    <nav>
+      <a data-go="home">🏠 <span>الرئيسية</span></a>
+      <a data-go="lockers">📦 <span>الخزائن</span></a>
+      <a data-go="warehouse">🏭 <span>المستودع</span></a>
+      <a data-go="departments">🏢 <span>الأقسام</span></a>
+      <a data-go="employees">🪪 <span>الموظفون</span></a>
+    </nav>
+    <div class="side-foot"><button id="themeBtn" title="تبديل السمة">🌙</button><button id="exportBtn" title="تصدير البيانات">⬇️</button><button id="importBtn" title="استيراد البيانات">⬆️</button></div>
+  </aside>
+  <main>
+    <header class="topbar">
+      <button class="icon-btn menu" id="menuBtn">☰</button>
+      <h1 id="pageTitle"></h1>
+      <span class="grow"></span>
+      <button class="icon-btn" id="alertBtn" title="التنبيهات">🔔<i class="badge" id="alertCount">0</i></button>
+      <button class="btn primary" id="addBtn" hidden>＋ إضافة</button>
+    </header>
+    <section id="view"></section>
+  </main>
+</div>
+<div class="modal-wrap" id="modal" hidden><div class="modal" id="modalBox"></div></div>
+<div class="toast" id="toast"></div>
+<input type="file" id="importFile" accept="application/json" hidden>
+<script src="app.js"></script>
+</body>
+</html>

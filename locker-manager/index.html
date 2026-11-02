@@ -1,0 +1,2359 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FABY Keeper</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237b2ff7'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="style.css">
+<style>
+        .topbar-user {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1;
+        }
+        .topbar-user .user-name { color: #fff; }
+        .topbar-user .user-role {
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            background: linear-gradient(135deg, #7b2ff7 0%, #00d2ff 100%);
+            color: #fff;
+        }
+        .topbar-logout-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 38px; height: 38px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.04);
+            color: rgba(255,255,255,0.75);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .topbar-logout-btn:hover {
+            color: #ff7a7a;
+            border-color: rgba(255, 122, 122, 0.3);
+            background: rgba(255, 122, 122, 0.08);
+        }
+        [data-theme="light"] .topbar-user { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.08); }
+        [data-theme="light"] .topbar-user .user-name { color: #111; }
+        [data-theme="light"] .topbar-logout-btn { border-color: rgba(0,0,0,0.08); background: rgba(0,0,0,0.04); color: rgba(0,0,0,0.65); }
+
+        /* Role-based visibility — set on <body> at auth boot */
+        body:not(.role-manager) .manager-only { display: none !important; }
+
+        /* Users management page */
+        .users-page { padding: 24px; }
+        .users-toolbar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px;
+        }
+        .users-toolbar h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+        .users-add-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 18px; border: none; border-radius: 10px;
+            background: linear-gradient(135deg, #7b2ff7 0%, #00d2ff 100%);
+            color: #fff; font-weight: 600; font-size: 14px; cursor: pointer;
+            box-shadow: 0 6px 20px rgba(123, 47, 247, 0.3);
+            transition: transform 0.15s ease;
+            font-family: inherit;
+        }
+        .users-add-btn:hover { transform: translateY(-1px); }
+        .users-table-wrap {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            overflow: auto;
+        }
+        [data-theme="light"] .users-table-wrap { background: #fff; border-color: rgba(0,0,0,0.08); }
+        .users-table { width: 100%; border-collapse: collapse; }
+        .users-table th, .users-table td { padding: 14px 18px; text-align: start; font-size: 14px; }
+        .users-table th {
+            background: rgba(255,255,255,0.04);
+            font-weight: 600; font-size: 12px;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            color: rgba(255,255,255,0.55);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        [data-theme="light"] .users-table th { background: #f7f7fa; color: #555; border-color: rgba(0,0,0,0.06); }
+        .users-table tbody tr { border-top: 1px solid rgba(255,255,255,0.04); }
+        [data-theme="light"] .users-table tbody tr { border-color: rgba(0,0,0,0.05); }
+        .role-chip {
+            display: inline-block; padding: 3px 10px; border-radius: 999px;
+            font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+        }
+        .role-chip.manager  { background: linear-gradient(135deg, #7b2ff7, #00d2ff); color: #fff; }
+        .role-chip.admin    { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .role-chip.employee { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .status-chip {
+            display: inline-block; padding: 3px 10px; border-radius: 999px;
+            font-size: 11px; font-weight: 600;
+        }
+        .status-chip.active   { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+        .status-chip.inactive { background: rgba(239, 68, 68, 0.15); color: #ff7a7a; }
+        .users-row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+        .users-row-actions button {
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.04);
+            color: rgba(255,255,255,0.8);
+            width: 34px; height: 34px; border-radius: 8px; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+        [data-theme="light"] .users-row-actions button { border-color: rgba(0,0,0,0.08); background: #f7f7fa; color: #444; }
+        .users-row-actions button:hover { background: rgba(123, 47, 247, 0.15); border-color: rgba(123, 47, 247, 0.4); color: #c5a3ff; }
+        .users-row-actions button.danger:hover { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.4); color: #ff7a7a; }
+
+        /* User modal form fields */
+        .user-form-field { display: block; margin-bottom: 14px; }
+        .user-form-field label { display: block; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.75); margin-bottom: 6px; }
+        [data-theme="light"] .user-form-field label { color: #444; }
+        .user-form-field input[type="text"],
+        .user-form-field input[type="password"],
+        .user-form-field select {
+            width: 100%; padding: 11px 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: #fff; font-size: 14px; font-family: inherit;
+        }
+        [data-theme="light"] .user-form-field input,
+        [data-theme="light"] .user-form-field select {
+            background: #fff; border-color: rgba(0,0,0,0.12); color: #111;
+        }
+        .user-form-field input:focus, .user-form-field select:focus {
+            outline: none; border-color: rgba(123, 47, 247, 0.6);
+            box-shadow: 0 0 0 4px rgba(123, 47, 247, 0.12);
+        }
+        .user-form-checkbox { display: flex; align-items: center; gap: 8px; font-size: 14px; color: rgba(255,255,255,0.8); }
+        [data-theme="light"] .user-form-checkbox { color: #333; }
+    </style>
+</head>
+<body style="font-family: Tajawal, Inter, sans-serif;"> at auth boot */
+        body:not(.role-manager) .manager-only { display: none !important; }
+
+        /* Users management page */
+        .users-page { padding: 24px; }
+        .users-toolbar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px;
+        }
+        .users-toolbar h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+        .users-add-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 18px; border: none; border-radius: 10px;
+            background: linear-gradient(135deg, #7b2ff7 0%, #00d2ff 100%);
+            color: #fff; font-weight: 600; font-size: 14px; cursor: pointer;
+            box-shadow: 0 6px 20px rgba(123, 47, 247, 0.3);
+            transition: transform 0.15s ease;
+            font-family: inherit;
+        }
+        .users-add-btn:hover { transform: translateY(-1px); }
+        .users-table-wrap {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            overflow: auto;
+        }
+        [data-theme="light"] .users-table-wrap { background: #fff; border-color: rgba(0,0,0,0.08); }
+        .users-table { width: 100%; border-collapse: collapse; }
+        .users-table th, .users-table td { padding: 14px 18px; text-align: start; font-size: 14px; }
+        .users-table th {
+            background: rgba(255,255,255,0.04);
+            font-weight: 600; font-size: 12px;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            color: rgba(255,255,255,0.55);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        [data-theme="light"] .users-table th { background: #f7f7fa; color: #555; border-color: rgba(0,0,0,0.06); }
+        .users-table tbody tr { border-top: 1px solid rgba(255,255,255,0.04); }
+        [data-theme="light"] .users-table tbody tr { border-color: rgba(0,0,0,0.05); }
+        .role-chip {
+            display: inline-block; padding: 3px 10px; border-radius: 999px;
+            font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+        }
+        .role-chip.manager  { background: linear-gradient(135deg, #7b2ff7, #00d2ff); color: #fff; }
+        .role-chip.admin    { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .role-chip.employee { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .status-chip {
+            display: inline-block; padding: 3px 10px; border-radius: 999px;
+            font-size: 11px; font-weight: 600;
+        }
+        .status-chip.active   { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+        .status-chip.inactive { background: rgba(239, 68, 68, 0.15); color: #ff7a7a; }
+        .users-row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+        .users-row-actions button {
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.04);
+            color: rgba(255,255,255,0.8);
+            width: 34px; height: 34px; border-radius: 8px; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+        [data-theme="light"] .users-row-actions button { border-color: rgba(0,0,0,0.08); background: #f7f7fa; color: #444; }
+        .users-row-actions button:hover { background: rgba(123, 47, 247, 0.15); border-color: rgba(123, 47, 247, 0.4); color: #c5a3ff; }
+        .users-row-actions button.danger:hover { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.4); color: #ff7a7a; }
+
+        /* User modal form fields */
+        .user-form-field { display: block; margin-bottom: 14px; }
+        .user-form-field label { display: block; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.75); margin-bottom: 6px; }
+        [data-theme="light"] .user-form-field label { color: #444; }
+        .user-form-field input[type="text"],
+        .user-form-field input[type="password"],
+        .user-form-field select {
+            width: 100%; padding: 11px 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: #fff; font-size: 14px; font-family: inherit;
+        }
+        [data-theme="light"] .user-form-field input,
+        [data-theme="light"] .user-form-field select {
+            background: #fff; border-color: rgba(0,0,0,0.12); color: #111;
+        }
+        .user-form-field input:focus, .user-form-field select:focus {
+            outline: none; border-color: rgba(123, 47, 247, 0.6);
+            box-shadow: 0 0 0 4px rgba(123, 47, 247, 0.12);
+        }
+        .user-form-checkbox { display: flex; align-items: center; gap: 8px; font-size: 14px; color: rgba(255,255,255,0.8); }
+        [data-theme="light"] .user-form-checkbox { color: #333; }
+    </style>
+<style>
+      .ejoy-sub-active{
+        color: #1296ba !important;
+      }
+      
+      .ejoy-sub-hovered{
+        color: #1296ba !important;
+      }
+      .ejoy-sub-clzz{
+        cursor: pointer;
+        
+        lineHeight: 1.2;
+          font-size: 28px;
+          color: #FFCC00; background: rgba(17, 17, 17, 0.7);
+        
+      }
+      .ejoy-sub-clzz:hover{
+        color: #1296ba !important;
+      }
+      .ej-trans-sub{
+        position: absolute !important;
+        width: 100% !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        z-index: 9999999 !important;
+        cursor: move;
+      }
+      .ej-trans-sub > span{
+        color: #3CF9ED;
+        font-size: 18px;
+        text-align: center;
+        padding: 0 16px;
+        line-height: 1.5;
+        background: rgba(32, 26, 25, 0.8);
+        // text-shadow: 0px 1px 4px black;
+        padding: 0 8px;
+        
+        lineHeight: 1.2;
+        font-size: 16px;
+        color: #0CB1C7; background: rgba(67, 65, 65, 0.7);
+      
+      }
+      .ej-full-screen-video{
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        top: 30px;
+        right: 10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 99999999;
+        cursor: pointer;
+      }
+      .ej-main-sub{
+        position: absolute !important;
+        width: 100% !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        z-index: 99999999 !important;
+        cursor: move;
+        padding: 0 8px;
+      }
+      .ej-main-sub > span{
+        color: white;
+        font-size: 20px;
+        line-height: 1.5;
+        text-align: center;
+        background: rgba(32, 26, 25, 0.8);
+        padding: 2px 8px;
+        font-weight: normal !important;
+        
+        lineHeight: 1.2;
+          font-size: 28px;
+          color: #FFCC00; background: rgba(17, 17, 17, 0.7);
+        
+      }
+
+      .ej-main-sub .ejoy-sub-clzz{
+        background: transparent !important
+      }
+
+      .tran-subtitle > span{
+        cursor: pointer;
+        padding-left: 10px;
+        top: 2px;
+        position: relative;
+      }
+
+      .tran-subtitle > span > span{
+        position: absolute;
+        top: -170%;
+        background: rgba(0,0,0,0.5);
+        font-size: 13px;
+        line-height: 20px;
+        padding: 2px 8px;
+        color: white;
+        display: none;
+        border-radius: 4px;
+        white-space: nowrap;
+        left: -50%;
+        font-weight: normal;
+      }
+
+      .viewPopupPro {
+        z-index: 2147483647;
+        cursor: auto;
+        position: absolute;
+        z-index: 2147483647;
+        background: #111111;
+        transition: opacity 1s;
+        width: 172px;
+        height: 66px;
+        opacity: 1;
+        border-radius: 6px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .titlePopupPro {
+        font-style: normal;
+        font-weight: 400;
+        font-size: 10px;
+        line-height: 12px;
+        color: #E5E5E5;
+        text-shadow: 0px 3px 3px rgba(0, 0, 0, 0.25);
+      }
+  
+      .viewGoPro {
+        background: #FFCC00;
+        border-radius: 72.6257px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 8px;
+        padding-left: 10px;
+        cursor: pointer;
+  
+      }
+
+      .viewGoPro svg {
+        pointer-events: none;
+      }
+      
+      .textGoPro {
+        font-style: normal;
+        font-weight: 600;
+        font-size: 10px;
+        line-height: 12px;
+        pointer-events: none;
+        text-align: center;
+        color: #FFFFFF;
+        padding: 4px 14px 4px 4px;
+      }
+
+      .viewPopupPro{
+        top: auto !important;
+        bottom: 15px !important;
+      }
+
+      .view-icon-copy-main-sub:hover > span,
+      .view-icon-edit-sub:hover > span,
+      .view-icon-exit-full-sub:hover > span,
+      .view-icon-full-sub:hover > span,
+      .iconCrownGoPro:hover > span,
+      .view-icon-copy-tran-sub:hover > span {
+        display: block;
+      }
+
+      .iconCrownGoPro{
+        padding-left: 0px !important;
+        padding-right: 8px !important;
+      }
+      .iconCrownGoPro svg{
+        width: 17px;
+        height: 17px;
+      }
+      .view-icon-full-sub, .view-icon-exit-full-sub {
+        display: flex;
+      }
+
+      .view-icon-full-sub > svg, .view-icon-exit-full-sub > svg {
+        pointer-events: none;
+      }
+
+      .tran-subtitle > span > svg{
+        width: 16px;
+        height: 16px;
+        pointer-events: none;
+        display: inline-flex !important;
+        vertical-align: baseline !important;
+      }
+      
+      .view-icon-copy-main-sub > svg{
+        pointer-events: none;
+        color: #FFCC00
+      }
+
+      .iconCrownGoPro{
+        padding-left: 0 !important;
+        padding-right: 8px !important;
+      }
+      .view-icon-copy-tran-sub > svg{
+        pointer-events: none;
+        color: #0CB1C7
+      }
+      </style></head>
+<body style="font-family: Tajawal, Inter, sans-serif;">
+
+<div class="app-layout">
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand" onclick="navigateTo('home')">
+            <div class="sidebar-brand-icon">
+                <svg viewBox="0 0 100 100" width="40" height="40">
+                    <defs>
+                        <lineargradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#7b2ff7"></stop>
+                            <stop offset="100%" stop-color="#00d2ff"></stop>
+                        </lineargradient>
+                    </defs>
+                    <rect width="100" height="100" rx="22" fill="url(#brandGrad)"></rect>
+                    <rect x="28" y="18" width="44" height="52" rx="6" fill="none" stroke="white" stroke-width="5"></rect>
+                    <circle cx="50" cy="42" r="8" fill="none" stroke="white" stroke-width="4"></circle>
+                    <rect x="47" y="48" width="6" height="12" rx="2" fill="white"></rect>
+                    <rect x="22" y="72" width="56" height="12" rx="4" fill="rgba(255,255,255,0.35)"></rect>
+                </svg>
+            </div>
+            <div class="sidebar-brand-text">
+                <span class="sidebar-brand-name">FABY</span>
+                <span class="sidebar-brand-sub">Keeper</span>
+            </div>
+        </div>
+
+        <div class="sidebar-search">
+            <div class="sidebar-search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="sidebarSearch" data-i18n-placeholder="searchAll" placeholder="البحث في كل شيء..." oninput="handleGlobalSearch(this.value)">
+            </div>
+            <div class="sidebar-search-results open" id="sidebarSearchResults" style="display: none;"></div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a class="sidebar-link" data-page="home" onclick="navigateTo('home')">
+                <i class="fas fa-home"></i>
+                <span data-i18n="home">الرئيسية</span>
+            </a>
+            <a class="sidebar-link" data-page="lockers" onclick="navigateTo('lockers')">
+                <i class="fas fa-box-open"></i>
+                <span data-i18n="lockers">الخزائن</span>
+            </a>
+            <a class="sidebar-link" data-page="warehouse" onclick="navigateTo('warehouse')">
+                <i class="fas fa-warehouse"></i>
+                <span data-i18n="warehouse">المستودع</span>
+            </a>
+            <a class="sidebar-link" data-page="departments" onclick="navigateTo('departments')">
+                <i class="fas fa-building"></i>
+                <span data-i18n="departments">الأقسام</span>
+            </a>
+            <a class="sidebar-link" data-page="employees" onclick="navigateTo('employees')">
+                <i class="fas fa-id-badge"></i>
+                <span data-i18n="employees">الموظفون</span>
+            </a>
+            <a class="sidebar-link manager-only" data-page="users" onclick="navigateTo('users')">
+                <i class="fas fa-user-shield"></i>
+                <span data-i18n="users">المستخدمون</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button class="sidebar-footer-btn" onclick="toggleTheme()" title="تبديل السمة" data-i18n-title="toggleTheme">
+                <i class="fas fa-moon" id="themeIcon"></i>
+            </button>
+            <button class="sidebar-footer-btn" onclick="toggleLanguage()" title="تبديل اللغة" data-i18n-title="toggleLanguage">
+                <span id="langLabel">EN</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-content">
+
+        <!-- Top Bar -->
+        <div class="topbar">
+            <button class="topbar-hamburger" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <h1 id="pageTitle" data-i18n="home">الرئيسية</h1>
+            <div class="topbar-right">
+                <div class="topbar-user" id="userBadge" style="">
+                    <span class="user-name" id="userNameLabel">manager</span>
+                    <span class="user-role" id="userRoleLabel">manager</span>
+                </div>
+                <button class="topbar-alert-btn" onclick="openAlertsPanel()" title="التنبيهات" data-i18n-title="alerts">
+                    <i class="fas fa-bell"></i>
+                    <span class="topbar-alert-count" id="alertBadge"><span id="alertCount">80</span></span>
+                </button>
+                <button class="topbar-add-btn" id="addBtn" onclick="handleAddBtn()" style="display: none;">
+                    <i class="fas fa-plus-circle"></i>
+                    <span id="addBtnText" data-i18n="add">إضافة</span>
+                </button>
+                <button class="topbar-logout-btn" id="logoutBtn" onclick="logoutUser()" style="" title="تسجيل الخروج" data-i18n-title="signOut">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Alert Banner -->
+        <div class="alert-banner" id="alertBanner" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="alertText">80 عنصر في 19 خزانة بمخزون منخفض!</span>
+            <button onclick="dismissAlertBanner()"><i class="fas fa-times"></i></button>
+        </div>
+
+        <!-- ==================== PAGES ==================== -->
+
+        <!-- HOME PAGE -->
+        <div class="page" id="page-home">
+            <div class="home-container">
+                <div class="home-hero">
+                    <div class="home-hero-icon">
+                        <svg viewBox="0 0 100 100" width="90" height="90">
+                            <defs>
+                                <lineargradient id="heroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#7b2ff7"></stop>
+                                    <stop offset="100%" stop-color="#00d2ff"></stop>
+                                </lineargradient>
+                            </defs>
+                            <rect width="100" height="100" rx="22" fill="url(#heroGrad)"></rect>
+                            <rect x="28" y="18" width="44" height="52" rx="6" fill="none" stroke="white" stroke-width="5"></rect>
+                            <circle cx="50" cy="42" r="8" fill="none" stroke="white" stroke-width="4"></circle>
+                            <rect x="47" y="48" width="6" height="12" rx="2" fill="white"></rect>
+                            <rect x="22" y="72" width="56" height="12" rx="4" fill="rgba(255,255,255,0.35)"></rect>
+                        </svg>
+                        <div class="home-hero-glow"></div>
+                    </div>
+                    <h1 class="home-hero-title" data-i18n="appTitle">FABY Keeper</h1>
+                    <p class="home-hero-subtitle" data-i18n="homeSubtitle">إدارة التخزين والمستودعات والأقسام</p>
+                </div>
+                <div class="home-grid">
+                    <div class="home-card home-card-lockers" onclick="navigateTo('lockers')">
+                        <div class="home-card-bg"></div>
+                        <div class="home-card-content">
+                            <div class="home-card-icon"><i class="fas fa-box-open"></i></div>
+                            <h3 class="home-card-title" data-i18n="lockers">الخزائن</h3>
+                            <p class="home-card-desc" data-i18n="lockersDesc">إدارة خزائن التخزين وعناصر المخزون</p>
+                            <div class="home-card-count" id="homeLockerCount">0</div>
+                        </div>
+                    </div>
+                    <div class="home-card home-card-warehouse" onclick="navigateTo('warehouse')">
+                        <div class="home-card-bg"></div>
+                        <div class="home-card-content">
+                            <div class="home-card-icon"><i class="fas fa-warehouse"></i></div>
+                            <h3 class="home-card-title" data-i18n="warehouse">المستودع</h3>
+                            <p class="home-card-desc" data-i18n="warehouseDesc">إدارة مناطق المستودع والتخزين</p>
+                            <div class="home-card-count" id="homeWarehouseCount">0</div>
+                        </div>
+                    </div>
+                    <div class="home-card home-card-departments" onclick="navigateTo('departments')">
+                        <div class="home-card-bg"></div>
+                        <div class="home-card-content">
+                            <div class="home-card-icon"><i class="fas fa-building"></i></div>
+                            <h3 class="home-card-title" data-i18n="departments">الأقسام</h3>
+                            <p class="home-card-desc" data-i18n="departmentsDesc">إدارة الفرق والموظفين والمسؤوليات</p>
+                            <div class="home-card-count" id="homeDeptCount">0</div>
+                        </div>
+                    </div>
+                    <div class="home-card home-card-employees" onclick="navigateTo('employees')">
+                        <div class="home-card-bg"></div>
+                        <div class="home-card-content">
+                            <div class="home-card-icon"><i class="fas fa-id-badge"></i></div>
+                            <h3 class="home-card-title" data-i18n="employees">الموظفون</h3>
+                            <p class="home-card-desc" data-i18n="employeesDesc">إدارة الموظفين والعهدة</p>
+                            <div class="home-card-count" id="homeEmpCount">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LOCKERS PAGE -->
+        <div class="page" id="page-lockers">
+            <div class="page-search-bar">
+                <div class="page-search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="lockerSearch" data-i18n-placeholder="searchLockers" placeholder="البحث في الخزائن والعناصر..." oninput="handleLockerSearch(this.value)">
+                    <div class="page-search-results" id="lockerSearchResults" style="display: none;"></div>
+                </div>
+            </div>
+            <div class="stats-bar">
+                <div class="stat-card clickable" onclick="showAllCabinetItems()">
+                    <div class="stat-icon stat-icon-blue"><i class="fas fa-box-open"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statLockers">37</span>
+                        <span class="stat-label" data-i18n="totalLockers">إجمالي الخزائن</span>
+                    </div>
+                </div>
+                <div class="stat-card clickable" onclick="showAllCabinetItems()">
+                    <div class="stat-icon stat-icon-purple"><i class="fas fa-layer-group"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statStock">8697</span>
+                        <span class="stat-label" data-i18n="totalStock">إجمالي المخزون</span>
+                    </div>
+                </div>
+                <div class="stat-card stat-card-alert clickable" onclick="openAlertsPanel()">
+                    <div class="stat-icon stat-icon-orange"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statAlerts">80</span>
+                        <span class="stat-label" data-i18n="alerts">التنبيهات</span>
+                    </div>
+                </div>
+            </div>
+            <div class="layout-toolbar">
+                <div class="layout-toolbar-label"><i class="fas fa-th"></i> <span data-i18n="layout">التخطيط</span></div>
+                <div class="layout-toolbar-controls">
+                    <label class="layout-ctl"><span data-i18n="rows">الصفوف</span>
+                        <input type="number" id="lockerRowsInput" min="1" max="20" value="0" placeholder="تلقائي" data-i18n-placeholder="autoPlaceholder" oninput="setLockerLayout()">
+                    </label>
+                    <label class="layout-ctl"><span data-i18n="columns">الأعمدة</span>
+                        <input type="number" id="lockerColsInput" min="1" max="12" value="0" placeholder="تلقائي" data-i18n-placeholder="autoPlaceholder" oninput="setLockerLayout()">
+                    </label>
+                    <button class="btn-icon layout-reset" onclick="resetLockerLayout()" title="تلقائي" data-i18n-title="autoLayout"><i class="fas fa-magic"></i></button>
+                </div>
+            </div>
+            <div class="locker-grid-container">
+                <div class="locker-grid" id="lockerGrid"></div>
+            </div>
+        </div>
+
+        <!-- WAREHOUSE PAGE -->
+        <div class="page" id="page-warehouse">
+            <div class="page-search-bar">
+                <div class="page-search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="warehouseSearch" data-i18n-placeholder="searchWarehouse" placeholder="البحث في المناطق والعناصر..." oninput="handleWarehouseSearch(this.value)">
+                    <div class="page-search-results" id="warehouseSearchResults" style="display: none;"></div>
+                </div>
+            </div>
+            <div class="wh-zone-bar" id="whZoneBar"></div>
+            <div class="warehouse-content" id="warehouseContent">
+                <div class="loading-spinner" data-i18n="loading">جاري التحميل...</div>
+            </div>
+        </div>
+
+        <!-- DEPARTMENTS PAGE -->
+        <div class="page" id="page-departments">
+            <div class="page-search-bar">
+                <div class="page-search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="deptSearch" data-i18n-placeholder="searchDepartments" placeholder="البحث في الأقسام والموظفين..." oninput="handleDeptSearch(this.value)">
+                    <div class="page-search-results" id="deptSearchResults" style="display: none;"></div>
+                </div>
+            </div>
+            <div class="stats-bar" id="deptStatsBar">
+                <div class="stat-card clickable" onclick="showAllDepts()">
+                    <div class="stat-icon stat-icon-purple"><i class="fas fa-sitemap"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statDepts">0</span>
+                        <span class="stat-label" data-i18n="departments">الأقسام</span>
+                    </div>
+                </div>
+                <div class="stat-card clickable" onclick="showAllDeptEquipment()">
+                    <div class="stat-icon stat-icon-blue"><i class="fas fa-tools"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statDeptItems">0</span>
+                        <span class="stat-label" data-i18n="equipment">المعدات</span>
+                    </div>
+                </div>
+                <div class="stat-card clickable" onclick="navigateTo('employees')">
+                    <div class="stat-icon stat-icon-green"><i class="fas fa-users"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statDeptEmps">0</span>
+                        <span class="stat-label" data-i18n="employees">الموظفون</span>
+                    </div>
+                </div>
+            </div>
+            <div class="dept-grid" id="deptGrid">
+                <div class="loading-spinner" data-i18n="loading">جاري التحميل...</div>
+            </div>
+        </div>
+
+        <!-- EMPLOYEES PAGE -->
+        <div class="page" id="page-employees">
+            <div class="page-search-bar">
+                <div class="page-search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="empSearch" data-i18n-placeholder="searchEmployees" placeholder="البحث عن موظفين..." oninput="handleEmpSearch(this.value)">
+                    <div class="page-search-results open" id="empSearchResults" style="display: none;"><div class="search-empty">لم يتم العثور على نتائج</div></div>
+                </div>
+            </div>
+            <div class="stats-bar" id="empStatsBar">
+                <div class="stat-card clickable" onclick="showAllEmps()">
+                    <div class="stat-icon stat-icon-cyan"><i class="fas fa-id-badge"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statEmps">10</span>
+                        <span class="stat-label" data-i18n="employees">الموظفون</span>
+                    </div>
+                </div>
+                <div class="stat-card clickable" onclick="showAllCustodyItems()">
+                    <div class="stat-icon stat-icon-purple"><i class="fas fa-hand-holding"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statEmpCustody">20</span>
+                        <span class="stat-label" data-i18n="custodyItems">عناصر العهدة</span>
+                    </div>
+                </div>
+            </div>
+            <div class="emp-grid" id="empGrid"></div>
+        </div>
+
+        <!-- DEPARTMENT DETAIL PAGE -->
+        <div class="page" id="page-dept-detail">
+            <div class="dept-detail-header" id="deptDetailHeader">
+                <button class="back-btn" onclick="navigateTo('departments')">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="dept-detail-info">
+                    <h2 class="dept-detail-name"></h2>
+                    <div class="dept-detail-image"></div>
+                </div>
+                <div class="dept-header-actions">
+                    <button class="dept-header-action dept-header-action-edit" onclick="openEditDeptModal(currentDeptId)" title="تعديل القسم" data-i18n-title="editDepartment" data-i18n-aria="editDepartment" aria-label="تعديل القسم">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <button class="dept-header-action dept-header-action-reassign" onclick="openReassignManagerModal(currentDeptId)" title="تغيير الموظف المسؤول" data-i18n-title="reassignManager" data-i18n-aria="reassignManager" aria-label="تغيير الموظف المسؤول">
+                        <i class="fas fa-user-shield"></i>
+                    </button>
+                    <button class="dept-header-action dept-header-action-delete" onclick="confirmDeleteDept(currentDeptId)" title="حذف القسم" data-i18n-title="deleteDepartment" data-i18n-aria="deleteDepartment" aria-label="حذف القسم">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="dept-detail-tabs">
+                <button class="dept-dtab active" id="tabItems" onclick="switchDeptDetailTab('items')">
+                    <i class="fas fa-cubes"></i>
+                    <span data-i18n="items">عناصر</span>
+                </button>
+                <button class="dept-dtab" id="tabEquipment" onclick="switchDeptDetailTab('equipment')">
+                    <i class="fas fa-tools"></i>
+                    <span data-i18n="equipment">المعدات</span>
+                </button>
+                <button class="dept-dtab" id="tabIncoming" onclick="switchDeptDetailTab('incoming')">
+                    <i class="fas fa-inbox"></i>
+                    <span data-i18n="incomingCustody">عهدة واردة</span>
+                    <span class="dept-tab-badge" id="incomingBadge" style="display:none">0</span>
+                </button>
+                <button class="dept-dtab" id="tabHistory" onclick="switchDeptDetailTab('history')">
+                    <i class="fas fa-clock-rotate-left"></i>
+                    <span data-i18n="record">السجل</span>
+                </button>
+            </div>
+
+            <!-- Equipment Tab -->
+            <div class="dept-dtab-content active" id="deptEquipmentTab">
+                <div class="equip-toolbar">
+                    <div class="equip-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="equipSearch" data-i18n-placeholder="searchEquipPh" placeholder="البحث في المعدات..." oninput="renderEquipmentTab()">
+                    </div>
+                    <div class="equip-filter">
+                        <select id="equipFilter" onchange="renderEquipmentTab()">
+                            <option value="all" data-i18n="allRecords">جميع السجلات</option>
+                            <option value="in" data-i18n="inDept">في القسم</option>
+                            <option value="out" data-i18n="outOfDeptCustody">خارج عهدة القسم</option>
+                        </select>
+                    </div>
+                    <button class="btn-print" onclick="printEquipment()" title="طباعة" data-i18n-title="printBtn">
+                        <i class="fas fa-print"></i>
+                        <span data-i18n="print">طباعة</span>
+                    </button>
+                </div>
+                <div class="cond-filter-bar" id="deptEquipFilter"></div>
+                <div class="equip-grid" id="equipGrid"></div>
+                <div class="equip-add-card">
+                    <div class="equip-add-header">
+                        <span class="equip-add-icon"><i class="fas fa-cogs"></i></span>
+                        <span data-i18n="addEquipment">إضافة معدة</span>
+                    </div>
+                    <div class="equip-add-fields">
+                        <div class="equip-add-field">
+                            <i class="fas fa-tag"></i>
+                            <input type="text" id="newEquipName" data-i18n-placeholder="itemName" placeholder="اسم العنصر">
+                        </div>
+                        <div class="equip-add-field equip-add-field-sm">
+                            <i class="fas fa-sort-numeric-up"></i>
+                            <input type="number" id="newEquipQty" placeholder="1" min="1" value="1">
+                        </div>
+                        <div class="equip-add-field">
+                            <i class="fas fa-align-left"></i>
+                            <input type="text" id="newEquipDesc" data-i18n-placeholder="description" placeholder="الوصف">
+                        </div>
+                        <div class="equip-add-field">
+                            <i class="fas fa-bullseye"></i>
+                            <input type="text" id="newEquipPurpose" data-i18n-placeholder="purpose" placeholder="الغرض">
+                        </div>
+                        <div class="equip-add-field equip-add-field-sm">
+                            <i class="fas fa-clipboard-check"></i>
+                            <select id="newEquipCondition" class="area-add-condition" title="الحالة" data-i18n-title="condition">
+                                <option value="new" data-i18n="conditionNew">جديد</option>
+                                <option value="used" data-i18n="conditionUsed">مستعمل</option>
+                                <option value="repairable" data-i18n="conditionRepairable">قابلة للصيانة</option>
+                                <option value="maintenance" data-i18n="conditionMaintenance">بحاجة للصيانة</option>
+                                <option value="damaged" data-i18n="conditionDamaged">تالف</option>
+                            </select>
+                        </div>
+                        <label class="equip-add-file-btn">
+                            <i class="fas fa-camera"></i>
+                            <span data-i18n="chooseImage">اختر صورة</span>
+                            <input type="file" id="newEquipFile" accept="image/*" style="display:none">
+                        </label>
+                        <button class="btn-add equip-add-submit" onclick="addEquipment()">
+                            <i class="fas fa-plus-circle"></i>
+                            <span data-i18n="add">إضافة</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Tab -->
+            <div class="dept-dtab-content" id="deptHistoryTab">
+                <div class="dept-history-timeline" id="deptHistoryTimeline">
+                    <div class="loading-spinner" data-i18n="loading">جاري التحميل...</div>
+                </div>
+                <div class="add-item-bar history-add-bar">
+                    <select id="historyEmpSelect">
+                        <option value="" data-i18n="responsibleEmployee">الموظف المسؤول</option>
+                    </select>
+                    <input type="date" id="historyStartDate" title="تاريخ البداية" data-i18n-title="startDate">
+                    <input type="date" id="historyEndDate" title="تاريخ النهاية" data-i18n-title="endDate">
+                    <select id="historyStatus">
+                        <option value="active" data-i18n="active">نشط</option>
+                        <option value="completed" data-i18n="completed">منتهي</option>
+                        <option value="transferred" data-i18n="transferred">منقول</option>
+                    </select>
+                    <input type="text" id="historyNotes" data-i18n-placeholder="notes" placeholder="ملاحظات">
+                    <button class="btn-add" onclick="addHistory()">
+                        <i class="fas fa-plus"></i>
+                        <span data-i18n="add">إضافة</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Incoming Custody Tab -->
+            <div class="dept-dtab-content" id="deptIncomingTab">
+                <h3 class="emp-section-title"><i class="fas fa-inbox"></i> <span data-i18n="incomingCustodyTitle">عناصر تحت العهدة المؤقتة من أقسام أخرى</span></h3>
+                <div class="incoming-grid" id="deptIncomingGrid"></div>
+            </div>
+
+            <!-- Items Tab -->
+            <div class="dept-dtab-content" id="deptItemsTab">
+                <div class="items-toolbar-bar">
+                    <button class="btn-print" onclick="printDeptItems()" title="طباعة" data-i18n-title="printBtn">
+                        <i class="fas fa-print"></i>
+                        <span data-i18n="print">طباعة</span>
+                    </button>
+                    <button class="btn-print" onclick="printIncoming()" title="طباعة الواردة" data-i18n-title="printIncomingTitle">
+                        <i class="fas fa-print"></i>
+                        <span data-i18n="printIncoming">طباعة الواردة</span>
+                    </button>
+                </div>
+                <div class="cond-filter-bar" id="deptItemsFilter"></div>
+                <div class="dept-items-container" id="deptItemsContainer">
+                    <div class="loading-spinner" data-i18n="loading">جاري التحميل...</div>
+                </div>
+                <div class="add-item-bar">
+                    <input type="text" id="newDeptItemName" data-i18n-placeholder="itemName" placeholder="اسم العنصر">
+                    <input type="number" id="newDeptItemQty" placeholder="1" min="1" value="1">
+                    <input type="text" id="newDeptItemDesc" data-i18n-placeholder="description" placeholder="الوصف">
+                    <select id="newDeptItemCondition" class="area-add-condition">
+                        <option value="new" data-i18n="conditionNew">جديد</option>
+                        <option value="used" data-i18n="conditionUsed">مستعمل</option>
+                        <option value="repairable" data-i18n="conditionRepairable">قابلة للصيانة</option>
+                        <option value="maintenance" data-i18n="conditionMaintenance">بحاجة للصيانة</option>
+                        <option value="damaged" data-i18n="conditionDamaged">تالف</option>
+                    </select>
+                    <input type="file" id="newDeptItemFile" accept="image/*">
+                    <button class="btn-add" onclick="addDeptItem()">
+                        <i class="fas fa-plus"></i>
+                        <span data-i18n="add">إضافة</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- EMPLOYEE DETAIL PAGE -->
+        <div class="page" id="page-emp-detail">
+            <div class="emp-detail-header" id="empDetailHeader">
+                <button class="back-btn" onclick="navigateTo('employees')">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="emp-detail-info">
+                    <div class="emp-detail-avatar"><i class="fas fa-user" style="font-size:40px;color:var(--text-muted)"></i><label class="btn-icon emp-avatar-upload" style="cursor:pointer;position:absolute;bottom:0;right:0"><i class="fas fa-camera" style="font-size:12px"></i><input type="file" accept="image/*" style="display:none" onchange="uploadEmployeePhoto(9,this.files[0])"></label></div>
+                    <div class="emp-detail-text">
+                        <h2 class="emp-detail-name"></h2>
+                        <span class="emp-detail-title"></span>
+                        <a class="emp-detail-dept-link" style="cursor: pointer;"><i class="fas fa-building"></i> </a>
+                    </div>
+                </div>
+            </div>
+            <div class="emp-tabs-bar">
+                <button class="emp-tab-btn active" id="empTabCurrent" onclick="switchEmpTab('current')">
+                    <i class="fas fa-hand-holding"></i>
+                    <span data-i18n="custodyItems">عناصر العهدة</span>
+                </button>
+                <button class="emp-tab-btn" id="empTabStorage" onclick="switchEmpTab('storage')">
+                    <i class="fas fa-boxes"></i>
+                    <span data-i18n="tempCustodyTab">العهدة المؤقتة</span>
+                    <span class="emp-tab-badge" id="empStorageBadge" style="display:none">0</span>
+                </button>
+                <button class="emp-tab-btn" id="empTabHistory" onclick="switchEmpTab('history')">
+                    <i class="fas fa-scroll"></i>
+                    <span data-i18n="custodyHistory">سجل العهدة</span>
+                    <span class="emp-tab-badge" id="empHistoryBadge" style="">2</span>
+                </button>
+                <button class="btn-print emp-tab-print" onclick="printEmpCurrent()" title="طباعة العهدة الحالية" data-i18n-title="printCurrentTitle">
+                    <i class="fas fa-print"></i>
+                    <span data-i18n="printCurrent">طباعة الحالية</span>
+                </button>
+                <button class="btn-print emp-tab-print" onclick="printEmpStorage()" title="طباعة العهدة المؤقتة" data-i18n-title="printTempCustodyTitle">
+                    <i class="fas fa-print"></i>
+                    <span data-i18n="tempCustodyTab">العهدة المؤقتة</span>
+                </button>
+                <button class="btn-print emp-tab-print" onclick="printEmpHistory()" title="طباعة سجل العهدة" data-i18n-title="printHistoryTitle">
+                    <i class="fas fa-print"></i>
+                    <span data-i18n="printHistory">طباعة السجل</span>
+                </button>
+                <button class="btn-print emp-tab-print" onclick="printEmpSignatureSheet()" title="طباعة كشف توقيع العهدة" data-i18n-title="printSignatureTitle">
+                    <i class="fas fa-file-signature"></i>
+                    <span data-i18n="printSignatureSheet">طباعة كشف التوقيع</span>
+                </button>
+            </div>
+
+            <div class="emp-items-section" id="empStorageSection" style="display:none">
+                <h3 class="emp-section-title"><i class="fas fa-boxes" style="color:#f59e0b"></i> <span data-i18n="tempCustodyTab">العهدة المؤقتة</span></h3>
+                <div class="emp-custody-grid" id="empStorageGrid"></div>
+            </div>
+
+            <div class="emp-history-section" id="empHistorySection" style="display:none">
+                <div class="emp-history-toolbar">
+                    <div class="emp-history-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="empHistorySearch" data-i18n-placeholder="searchHistoryPh" placeholder="البحث بالعنصر أو التواريخ أو الملاحظات..." oninput="renderEmpHistoryList()">
+                    </div>
+                    <div class="emp-history-filter">
+                        <select id="empHistoryFilter" onchange="renderEmpHistoryList()">
+                            <option value="all" data-i18n="allRecords">جميع السجلات</option>
+                            <option value="returned" data-i18n="returned">مُرجع</option>
+                            <option value="transferred" data-i18n="transferred">منقول</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="emp-history-timeline" id="empHistoryTimeline"></div>
+            </div>
+
+            <div class="emp-items-section emp-fade-in" id="empCurrentSection">
+                <h3 class="emp-section-title"><i class="fas fa-hand-holding"></i> <span data-i18n="currentCustody">العهدة الحالية</span></h3>
+                <div class="emp-custody-grid" id="empCustodyGrid"></div>
+                <div class="emp-add-item-form" id="empAddItemForm">
+                    <div class="emp-add-item-header">
+                        <i class="fas fa-plus-circle"></i>
+                        <span data-i18n="addItem">إضافة عنصر</span>
+                    </div>
+                    <div class="emp-add-item-fields">
+                        <div class="emp-add-field">
+                            <i class="fas fa-tag"></i>
+                            <input type="text" id="newEmpItemName" data-i18n-placeholder="itemName" placeholder="اسم العنصر">
+                        </div>
+                        <div class="emp-add-field">
+                            <i class="fas fa-sort-numeric-up"></i>
+                            <input type="number" id="newEmpItemQty" placeholder="1" min="1" value="1">
+                        </div>
+                        <div class="emp-add-field">
+                            <i class="fas fa-align-left"></i>
+                            <input type="text" id="newEmpItemDesc" data-i18n-placeholder="description" placeholder="الوصف">
+                        </div>
+                        <div class="emp-add-field">
+                            <i class="fas fa-bullseye"></i>
+                            <input type="text" id="newEmpItemPurpose" data-i18n-placeholder="purpose" placeholder="الغرض">
+                        </div>
+                        <label class="emp-add-file-btn">
+                            <i class="fas fa-camera"></i>
+                            <span data-i18n="chooseImage">اختر صورة</span>
+                            <input type="file" id="newEmpItemFile" accept="image/*" style="display:none">
+                        </label>
+                        <button class="btn-add-strong" onclick="addEmpItem()">
+                            <i class="fas fa-plus-circle"></i>
+                            <span data-i18n="add">إضافة</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Management (Manager only) -->
+        <div class="page" id="page-users">
+            <div class="users-page">
+                <div class="users-toolbar">
+                    <h2 data-i18n="users">المستخدمون</h2>
+                    <button class="users-add-btn" onclick="openUserModal()">
+                        <i class="fas fa-plus"></i>
+                        <span data-i18n="addUser">إضافة مستخدم</span>
+                    </button>
+                </div>
+                <div class="users-table-wrap">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="username">اسم المستخدم</th>
+                                <th data-i18n="role">الصلاحية</th>
+                                <th data-i18n="status">الحالة</th>
+                                <th data-i18n="linkedEmployee">الموظف المرتبط</th>
+                                <th data-i18n="department">القسم</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /.main-content -->
+</div><!-- /.app-layout -->
+
+
+<!-- ==================== MODALS ==================== -->
+
+<!-- Locker Detail Modal -->
+<div class="modal-overlay" id="lockerModal">
+    <div class="modal-content locker-modal">
+        <div class="modal-header">
+            <h2 id="modalLockerName" data-i18n="lockerDetail">lockerDetail</h2>
+            <div class="modal-header-actions">
+                <div class="view-toggle">
+                    <button class="view-btn active" id="listViewBtn" onclick="switchLockerView('list')">
+                        <i class="fas fa-list"></i>
+                    </button>
+                    <button class="view-btn" id="gridViewBtn" onclick="switchLockerView('grid')">
+                        <i class="fas fa-th"></i>
+                    </button>
+                </div>
+                <button class="btn-print-icon" onclick="printLockerItems()" title="طباعة" data-i18n-title="printBtn">
+                    <i class="fas fa-print"></i>
+                </button>
+                <button class="modal-close" onclick="closeLockerModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="modal-body">
+            <!-- List View -->
+            <div class="locker-view active" id="listView">
+                <div class="lk-items-list" id="itemsTableBody"></div>
+            </div>
+            <!-- Grid View -->
+            <div class="locker-view" id="gridView">
+                <div class="items-grid" id="itemsGrid"></div>
+            </div>
+        </div>
+        <div class="modal-footer lk-add-bar">
+            <div class="lk-add-fields">
+                <div class="lk-add-field"><i class="fas fa-tag"></i><input type="text" id="newItemName" data-i18n-placeholder="itemName" placeholder="اسم العنصر"></div>
+                <div class="lk-add-field lk-add-sm"><i class="fas fa-sort-numeric-up"></i><input type="number" id="newItemQty" placeholder="1" min="0" value="1"></div>
+                <div class="lk-add-field lk-add-sm"><i class="fas fa-shield-alt"></i><input type="number" id="newItemMin" placeholder="0" min="0" value="0"></div>
+                <div class="lk-add-field"><i class="fas fa-align-left"></i><input type="text" id="newItemDesc" data-i18n-placeholder="description" placeholder="الوصف"></div>
+                <label class="lk-add-file"><i class="fas fa-camera"></i><input type="file" id="newItemFile" accept="image/*" style="display:none"></label>
+            </div>
+            <button class="btn-add-strong" onclick="addItem()">
+                <i class="fas fa-plus-circle"></i>
+                <span data-i18n="add">إضافة</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Locker Modal -->
+<div class="modal-overlay" id="addLockerModal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2 data-i18n="addLocker">إضافة خزانة</h2>
+            <button class="modal-close" onclick="closeModal('addLockerModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label data-i18n="lockerNumber">رقم الخزانة</label>
+                <input type="number" id="newLockerNumber" min="1" placeholder="#">
+            </div>
+            <div class="form-group">
+                <label data-i18n="lockerName">lockerName</label>
+                <input type="text" id="newLockerName" data-i18n-placeholder="lockerName" placeholder="lockerName">
+            </div>
+            <div class="form-group">
+                <label data-i18n="description">الوصف</label>
+                <input type="text" id="newLockerDesc" data-i18n-placeholder="descriptionPlaceholder" placeholder="الوصف (اختياري)">
+            </div>
+            <div class="form-group">
+                <label data-i18n="picture">صورة</label>
+                <label class="file-picker">
+                    <i class="fas fa-camera"></i>
+                    <span data-i18n="chooseImage">اختر صورة</span>
+                    <input type="file" id="newLockerFile" accept="image/*">
+                </label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('addLockerModal')" data-i18n="cancel">إلغاء</button>
+            <button class="btn-add" onclick="saveNewLocker()">
+                <i class="fas fa-plus"></i>
+                <span data-i18n="add">إضافة</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Locker Modal -->
+<div class="modal-overlay" id="editLockerModal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2><i class="fas fa-pen"></i> <span data-i18n="editLocker">تعديل الخزانة</span></h2>
+            <button class="modal-close" onclick="closeModal('editLockerModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="edit-locker-preview">
+                <div class="edit-locker-image" id="editLockerImage"><i class="fas fa-box-open"></i></div>
+                <label class="file-picker file-picker-sm">
+                    <i class="fas fa-camera"></i>
+                    <span data-i18n="changeImage">تغيير الصورة</span>
+                    <input type="file" id="editLockerFile" accept="image/*" onchange="onEditLockerFile(this)">
+                </label>
+            </div>
+            <div class="form-group">
+                <label data-i18n="lockerNumber">رقم الخزانة</label>
+                <input type="number" id="editLockerNumber" min="1">
+            </div>
+            <div class="form-group">
+                <label data-i18n="lockerName">lockerName</label>
+                <input type="text" id="editLockerName" data-i18n-placeholder="lockerName" placeholder="lockerName">
+            </div>
+            <div class="form-group">
+                <label data-i18n="description">الوصف</label>
+                <textarea id="editLockerDesc" rows="3" data-i18n-placeholder="descriptionPlaceholder" placeholder="الوصف (اختياري)"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('editLockerModal')" data-i18n="cancel">إلغاء</button>
+            <button class="btn-add" onclick="saveEditLocker()">
+                <i class="fas fa-save"></i>
+                <span data-i18n="save">حفظ</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Transfer Warehouse Item Modal (zone/area) -->
+<div class="modal-overlay" id="transferItemModal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2>
+                <svg class="wh-svg-icon wh-svg-area" viewBox="0 0 24 24" aria-hidden="true" style="margin-inline-end:8px"><path d="M7 10h10l-3-3 1.4-1.4L21 11l-5.6 5.4L14 15l3-3H7z"></path></svg>
+                <span data-i18n="transferItem">نقل العنصر</span>
+            </h2>
+            <button class="modal-close" onclick="closeModal('transferItemModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="move-item-info" id="transferItemInfo"></div>
+            <div class="form-group">
+                <label data-i18n="targetZone">المنطقة المستهدفة</label>
+                <select id="transferTargetZone" onchange="onTransferZoneChange()">
+                    <option value="" data-i18n="selectTargetZone">اختر المنطقة المستهدفة</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label data-i18n="targetArea">المساحة المستهدفة</label>
+                <select id="transferTargetArea">
+                    <option value="" data-i18n="noArea">بدون مساحة (مستوى المنطقة)</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('transferItemModal')" data-i18n="cancel">إلغاء</button>
+            <button class="btn-add" onclick="confirmTransferItem()">
+                <svg class="wh-svg-icon wh-svg-area" viewBox="0 0 24 24" aria-hidden="true" style="margin-inline-end:6px"><path d="M7 10h10l-3-3 1.4-1.4L21 11l-5.6 5.4L14 15l3-3H7z"></path></svg>
+                <span data-i18n="transfer">نقل</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Move Item Modal -->
+<div class="modal-overlay" id="moveItemModal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2><i class="fas fa-exchange-alt"></i> <span data-i18n="moveItem">نقل العنصر</span></h2>
+            <button class="modal-close" onclick="closeModal('moveItemModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="move-item-info" id="moveItemInfo"></div>
+            <div class="form-group">
+                <label data-i18n="targetLocker">الخزانة المستهدفة</label>
+                <div class="move-locker-grid" id="moveLockerGrid"></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('moveItemModal')" data-i18n="cancel">إلغاء</button>
+            <button class="btn-add" onclick="confirmMoveItem()">
+                <i class="fas fa-exchange-alt"></i>
+                <span data-i18n="move">نقل</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- All Cabinet Items Modal -->
+<div class="modal-overlay" id="allCabinetItemsModal">
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h2><i class="fas fa-th-large"></i> <span data-i18n="allCabinetItems">جميع عناصر الخزائن</span></h2>
+            <button class="modal-close" onclick="closeModal('allCabinetItemsModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="all-cab-items-grid" id="allCabinetItemsBody"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Zone Modal -->
+<div class="modal-overlay" id="addZoneModal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2 data-i18n="addZone">إضافة منطقة</h2>
+            <button class="modal-close" onclick="closeModal('addZoneModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label data-i18n="zoneName">اسم المنطقة</label>
+                <input type="text" id="newZoneName" data-i18n-placeholder="zoneName" placeholder="اسم المنطقة">
+            </div>
+            <div class="form-group">
+                <label data-i18n="location">الموقع</label>
+                <input type="text" id="newZoneLocation" data-i18n-placeholder="location" placeholder="الموقع">
+            </div>
+            <div class="form-group">
+                <label data-i18n="description">الوصف</label>
+                <input type="text" id="newZoneDesc" data-i18n-placeholder="description" placeholder="الوصف">
+            </div>
+            <div class="form-group">
+                <label data-i18n="color">color</label>
+                <input type="color" id="newZoneColor" value="#7b2ff7">
+            </div>
+            <div class="form-group">
+                <label data-i18n="imageOptional">صورة (اختياري)</label>
+                <div class="image-uploader" data-uploader="newZone">
+                    <div class="image-uploader-preview" id="newZonePreview">
+                        <svg class="wh-svg-icon wh-svg-zone" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"></path></svg>
+                    </div>
+                    <div class="image-uploader-actions">
+                        <label class="image-uploader-pick">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span data-i18n="chooseImage">اختر صورة</span>
+                            <input type="file" id="newZoneImageFile" accept="image/jpeg,image/jpg,image/png,image/webp" onchange="handleImagePick('newZone', this)">
+                        </label>
+                        <button type="button" class="image-uploader-remove" id="newZoneRemoveBtn" onclick="clearImagePick('newZone')" hidden="">
+                            <i class="fas fa-trash-alt"></i>
+                            <span data-i18n="removeImage">إزالة الصورة</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('addZoneModal')" data-i18n="cancel">إلغاء</button>
+            <button class="btn-add" onclick="saveNewZone()">
+                <i class="fas fa-plus"></i>
+                <span data-i18n="add">إضافة</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Zone Modal -->
+<div class="modal-overlay" id="editZoneModal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2 data-i18n="editZone">editZone</h2>
+            <button class="modal-close" onclick="closeModal('editZoneModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label data-i18n="zoneName">اسم المنطقة</label>
+                <input type="text" id="editZoneName" data-i18n-placeholder="zoneName" placeholder="اسم المنطقة">
+            </div>
+            <div class="form-group">
+                <label data-i18n="location">الموقع</label>
+                <input type="text" id="editZoneLocation" data-i18n-placeholder="location" placeholder="الموقع">
+            </div>
+            <div class="form-group">
+                <label data-i18n="description">الوصف</label>
+                <input type="text" id="editZoneDesc" data-i18n-placeholder="description" placeholder="الوصف">
+            </div>
+            <div class="form-group">
+                <label data-i18n="color">color</label>
+                <input type="color" id="editZoneColor" value="#7b2ff7">
+            </div>
+            <div class="form-group">
+                <label data-i18n="imageOptional">صورة (اختياري)</label>
+                <div class="image-uploader" data-uploader="editZone">
+                    <div class="image-uploader-preview" id="editZonePreview">
+                        <svg class="wh-svg-icon wh-svg-zone" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"></path></svg>
+                    </div>
+                    <div class="image-uploader-actions">
+                        <label class="image-uploader-pick">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span data-i18n="replaceImage">تغيير الصورة</span>
+                            <input type="file" id="editZoneImageFile" accept="image/jpeg,image/jpg,image/png,image/webp" onchange="handleImagePick('editZone', this)">
+                        </label>
+                        <button type="button" class="image-uploader-remove" id="editZoneRemoveBtn" onclick="clearImagePick('editZone')" hidden="">
+                            <i class="fas fa-trash-alt"></i>
+                            <span data-i18n="removeImage">إزالة الصورة</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('editZoneModal')" data-i18n="cancel">إلغاء</button>
+            <button class="btn-add" onclick="saveEditZone()">
+                <i class="fas fa-save"></i>
+                <span data-i18n="save">حفظ</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Area Modal -->
+<div class="modal-overlay" id="editAreaModal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2 data-i18n="editArea">editArea</h2>
+            <button class="modal-close" onclick="closeModal('editAreaModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label data-i18n="areaName">اسم المساحة</label>
+                <input type="text" id="editAreaName" data-i18n-placeholder="areaName" placeholder="اسم المساحة">
+            </div>
+            <div class="form-group">
+                <label data-i18n="description">الوصف</label>
+                <input type="text" id="editAreaDesc" data-i18n-placeholder="description" placeholder="الوصف">
+            </div>
+            <div class="form-group">
+                <label data-i18n="imageOptional">صورة (اختياري)</label>
+                <div class="image-uploader" data-uploader="editArea">
+                    <div class="image-uploader-preview" id="editAreaPreview">
+                        <svg class="wh-svg-icon wh-svg-area" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"></path></svg>
+                    </div>
+                    <div class="image-uploader-actions">
+                        <label class="image-uploader-pick">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span data-i18n="replaceImage">تغيير الصورة</span>
+                            <input type="file" id="editAreaImageFile" accept="image/jpeg,image/jpg,image/png,image/webp" onchange="handleImagePick('editArea', this)">
+                        </label>
+                        <button type="button" class="image-uploader-remove" id="editAreaRemoveBtn" onclick="clearImagePick('editArea')" hidden="">
+                            <i class="fas fa-trash-alt"></i>
+                            <span data-i18n="removeImage">إزالة الصورة</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('editAreaModal')" data-i18n="cancel">إلغاء</button>
+            <button class="btn-add" onclick="saveEditArea()">
+                <i class="fas fa-save"></i>
+                <span data-i18n="save">حفظ</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Area Modal -->
+<div class="modal-overlay" id="addAreaModal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2 data-i18n="addArea">إضافة مساحة</h2>
+            <button class="modal-close" onclick="closeModal('addAreaModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label data-i18n="areaName">اسم المساحة</label>
+                <input type="text" id="newAreaName" data-i18n-placeholder="areaName" placeholder="اسم المساحة">
+            </div>
+            <div class="form-group">
+                <label data-i18n="description">الوصف</label>
+                <input type="text" id="newAreaDesc" data-i18n-placeholder="description" placeholder="الوصف">
+            </div>
+            <div class="form-group">
+                <label data-i18n="imageOptional">صورة (اختياري)</label>
+                <div class="image-uploader" data-uploader="newArea">
+                    <div class="image-uploader-preview" id="newAreaPreview">
+                        <svg class="wh-svg-icon wh-svg-area" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"></path></svg>
+                    </div>
+                    <div class="image-uploader-actions">
+                        <label class="image-uploader-pick">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span data-i18n="chooseImage">اختر صورة</span>
+                            <input type="file" id="newAreaImageFile" accept="image/jpeg,image/jpg,image/png,image/webp" onchange="handleImagePick('newArea', this)">
+                        </label>
+                        <button type="button" class="image-uploader-remove" id="newAreaRemoveBtn" onclick="clearImagePick('newArea')" hidden="">
+                            <i class="fas fa-trash-alt"></i>
+                            <span data-i18n="removeImage">إزالة الصورة</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('addAreaModal')" data-i18n="cancel">إلغاء</button>
+            <button class="btn-add" onclick="saveNewArea()">
+                <i class="fas fa-plus"></i>
+                <span data-i18n="add">إضافة</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Department Modal -->
+<div class="modal-overlay" id="addDeptModal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2 data-i18n="addDepartment">إضافة قسم</h2>
+            <button class="modal-close" onclick="closeModal('addDeptModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label data-i18n="deptName">اسم القسم</label>
+                <input type="text" id="newDeptName" data-i18n-placeholder="deptName" placeholder="اسم القسم">
+            </div>
+            <div class="form-group">
+                <label data-i18n="manager">المدير</label>
+                <select id="newDeptManager">
+                    <option value="" data-i18n="selectManager">اختر المدير</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label data-i18n="description">الوصف</label>
+                <input type="text" id="newDeptDesc" data-i18n-placeholder="description" placeholder="الوصف">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('addDeptModal')" data-i18n="cancel">إلغاء</button>
+            <button class="btn-add" onclick="saveNewDept()">
+                <i class="fas fa-plus"></i>
+                <span data-i18n="add">إضافة</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Department Modal -->
+<div class="modal-overlay" id="editDeptModal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2><i class="fas fa-pen" style="margin-right:8px;color:var(--accent)"></i> <span data-i18n="editDepartment">تعديل القسم</span></h2>
+            <button class="modal-close" onclick="closeModal('editDeptModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="editDeptId">
+            <div class="form-group">
+                <label data-i18n="deptName">اسم القسم</label>
+                <input type="text" id="editDeptName">
+            </div>
+            <div class="form-group">
+                <label data-i18n="manager">المدير</label>
+                <input type="text" id="editDeptManager" placeholder="">
+            </div>
+            <div class="form-group">
+                <label data-i18n="description">الوصف</label>
+                <input type="text" id="editDeptDesc">
+            </div>
+            <div class="form-group">
+                <label data-i18n="imageOptional">صورة (اختياري)</label>
+                <div class="image-uploader" data-uploader="editDept">
+                    <div class="image-uploader-preview" id="editDeptPreview">
+                        <i class="fas fa-building" style="font-size:32px;color:var(--text-muted)"></i>
+                    </div>
+                    <div class="image-uploader-actions">
+                        <label class="image-uploader-pick">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span data-i18n="chooseImage">اختر صورة</span>
+                            <input type="file" id="editDeptImageFile" accept="image/jpeg,image/jpg,image/png,image/webp" onchange="handleImagePick('editDept', this)">
+                        </label>
+                        <button type="button" class="image-uploader-remove" id="editDeptRemoveBtn" onclick="clearImagePick('editDept')" hidden="">
+                            <i class="fas fa-trash-alt"></i>
+                            <span data-i18n="removeImage">إزالة الصورة</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('editDeptModal')" data-i18n="cancel">إلغاء</button>
+            <button class="btn-add" onclick="saveEditDept()"><i class="fas fa-save"></i> <span data-i18n="save">حفظ</span></button>
+        </div>
+    </div>
+</div>
+
+<!-- Reassign Manager Modal -->
+<div class="modal-overlay" id="reassignManagerModal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2><i class="fas fa-user-shield" style="margin-right:8px;color:var(--accent)"></i> <span data-i18n="reassignManager">تغيير الموظف المسؤول</span></h2>
+            <button class="modal-close" onclick="closeModal('reassignManagerModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="reassignDeptId">
+            <div class="reassign-current">
+                <span class="reassign-current-label" data-i18n="currentEmployee">الموظف الحالي</span>
+                <strong id="reassignCurrentManager">—</strong>
+            </div>
+            <div class="form-group">
+                <input type="text" id="reassignManagerSearch" data-i18n-placeholder="searchEmployees" placeholder="البحث عن موظفين..." oninput="filterReassignList(this.value)">
+            </div>
+            <div class="reassign-emp-list" id="reassignManagerList"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('reassignManagerModal')" data-i18n="cancel">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<!-- Shared Transfer Dialog (warehouse zones/spaces + dept items/equipment) -->
+<div class="modal-overlay" id="transferDialog">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2 id="transferDialogTitle"><i class="fas fa-arrow-right-arrow-left" style="margin-right:8px;color:var(--accent)"></i> <span data-i18n="transferAction">نقل</span></h2>
+            <button class="modal-close" onclick="closeTransferDialog()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div id="transferDialogSubtitle" class="transfer-subtitle"></div>
+            <div class="transfer-pill-bar" id="transferDestPills"></div>
+            <div id="transferDialogBody"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeTransferDialog()" data-i18n="cancel">إلغاء</button>
+            <button class="btn-add" onclick="confirmTransferDialog()">
+                <i class="fas fa-arrow-right-arrow-left"></i>
+                <span data-i18n="transfer">نقل</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Department Item Modal -->
+<div class="modal-overlay" id="editDeptItemModal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2><i class="fas fa-cube" style="margin-right:8px;color:var(--accent)"></i> <span id="editDeptItemTitle" data-i18n="editItemTitle">تعديل العنصر</span></h2>
+            <button class="modal-close" onclick="closeModal('editDeptItemModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="editDeptItemId">
+            <input type="hidden" id="editDeptItemKind"><!-- 'item' | 'equipment' -->
+            <div class="form-group">
+                <label data-i18n="itemName">اسم العنصر</label>
+                <input type="text" id="editDeptItemName">
+            </div>
+            <div class="form-group">
+                <label data-i18n="description">الوصف</label>
+                <input type="text" id="editDeptItemDesc">
+            </div>
+            <div class="form-group">
+                <label data-i18n="quantity">الكمية</label>
+                <input type="number" min="1" id="editDeptItemQty">
+            </div>
+            <div class="form-group">
+                <label data-i18n="receiptDate">تاريخ الاستلام</label>
+                <input type="date" id="editDeptItemReceiptDate">
+            </div>
+            <div class="form-group">
+                <label data-i18n="returnDate">تاريخ الارجاع</label>
+                <input type="date" id="editDeptItemEndDate">
+            </div>
+            <div class="form-group">
+                <label data-i18n="condition">الحالة</label>
+                <select id="editDeptItemCondition">
+                    <option value="new" data-i18n="conditionNew">جديد</option>
+                    <option value="used" data-i18n="conditionUsed">مستعمل</option>
+                    <option value="repairable" data-i18n="conditionRepairable">قابلة للصيانة</option>
+                    <option value="maintenance" data-i18n="conditionMaintenance">بحاجة للصيانة</option>
+                    <option value="damaged" data-i18n="conditionDamaged">تالف</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label data-i18n="imageOptional">صورة (اختياري)</label>
+                <div class="image-uploader" data-uploader="editDeptItem">
+                    <div class="image-uploader-preview" id="editDeptItemPreview">
+                        <i class="fas fa-cube" style="font-size:32px;color:var(--text-muted)"></i>
+                    </div>
+                    <div class="image-uploader-actions">
+                        <label class="image-uploader-pick">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span data-i18n="chooseImage">اختر صورة</span>
+                            <input type="file" id="editDeptItemImageFile" accept="image/jpeg,image/jpg,image/png,image/webp" onchange="handleImagePick('editDeptItem', this)">
+                        </label>
+                        <button type="button" class="image-uploader-remove" id="editDeptItemRemoveBtn" onclick="clearImagePick('editDeptItem')" hidden="">
+                            <i class="fas fa-trash-alt"></i>
+                            <span data-i18n="removeImage">إزالة الصورة</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('editDeptItemModal')" data-i18n="cancel">إلغاء</button>
+            <button class="btn-add" onclick="saveEditDeptItem()"><i class="fas fa-save"></i> <span data-i18n="save">حفظ</span></button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Employee Modal -->
+<div class="modal-overlay" id="addEmpModal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h2><i class="fas fa-user-plus" style="margin-right:8px;color:var(--accent)"></i> <span data-i18n="addEmployee">إضافة موظف</span></h2>
+            <button class="modal-close" onclick="closeModal('addEmpModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group form-group-icon">
+                <label><i class="fas fa-user"></i> <span data-i18n="employeeName">اسم الموظف</span></label>
+                <input type="text" id="newEmpName" data-i18n-placeholder="employeeName" placeholder="اسم الموظف">
+            </div>
+            <div class="form-group form-group-icon">
+                <label><i class="fas fa-briefcase"></i> <span data-i18n="jobTitle">المسمى الوظيفي</span></label>
+                <input type="text" id="newEmpTitle" data-i18n-placeholder="jobTitle" placeholder="المسمى الوظيفي">
+            </div>
+            <div class="form-group form-group-icon">
+                <label><i class="fas fa-building"></i> <span data-i18n="departments">الأقسام</span></label>
+                <select id="newEmpDept">
+                    <option value="" data-i18n="selectDepartment">اختر قسماً</option>
+                </select>
+            </div>
+            <div class="form-group form-group-icon">
+                <label><i class="fas fa-camera"></i> <span data-i18n="picture">صورة</span></label>
+                <label class="file-picker">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span data-i18n="chooseImage">اختر صورة</span>
+                    <input type="file" id="newEmpPhoto" accept="image/*">
+                </label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('addEmpModal')" data-i18n="cancel">إلغاء</button>
+            <button class="btn-add" onclick="saveNewEmployee()">
+                <i class="fas fa-user-plus"></i>
+                <span data-i18n="add">إضافة</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- All Areas Panel -->
+<div class="modal-overlay" id="allAreasPanel">
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h2><i class="fas fa-th-large"></i> <span data-i18n="allAreas">جميع المساحات</span></h2>
+            <button class="modal-close" onclick="closeModal('allAreasPanel')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="all-areas-grid" id="allAreasBody"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Alerts Panel -->
+<div class="modal-overlay" id="alertsPanel">
+    <div class="modal-content modal-md">
+        <div class="modal-header alert-panel-header">
+            <div class="alert-panel-title">
+                <div class="alert-panel-icon"><i class="fas fa-bell"></i></div>
+                <div>
+                    <h2 data-i18n="lowStockAlerts">تنبيهات المخزون المنخفض</h2>
+                    <div class="alert-panel-count" id="alertPanelCount"></div>
+                </div>
+            </div>
+            <button class="modal-close" onclick="closeModal('alertsPanel')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" style="padding:0">
+            <div class="alerts-list" id="alertsList">
+                <div class="no-results" data-i18n="noItems">لا توجد عناصر بعد.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Image Viewer -->
+<div class="modal-overlay" id="imageViewer" onclick="closeModal('imageViewer')">
+    <div class="image-viewer-content">
+        <button class="modal-close image-viewer-close" onclick="closeModal('imageViewer')">
+            <i class="fas fa-times"></i>
+        </button>
+        <img id="imageViewerImg" src="" alt="Image Preview">
+    </div>
+</div>
+
+<!-- Area Items Modal -->
+<div class="modal-overlay" id="areaItemsModal">
+    <div class="modal-content area-items-modal-content">
+        <div class="modal-header area-modal-header">
+            <div class="area-modal-title">
+                <div class="area-modal-icon"><i class="fas fa-th-large"></i></div>
+                <div>
+                    <h2 id="areaModalName">Area Items</h2>
+                    <div class="area-modal-sub"><span id="areaModalCount">0</span> <span data-i18n="items">عناصر</span></div>
+                </div>
+            </div>
+            <div class="modal-header-actions">
+                <button class="btn-print-icon" onclick="printAreaItems()" title="طباعة" data-i18n-title="printBtn">
+                    <i class="fas fa-print"></i>
+                </button>
+                <button class="modal-close" onclick="closeModal('areaItemsModal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="modal-body area-items-body">
+            <div class="cond-filter-bar" id="areaItemsFilter" role="toolbar" aria-label="تصفية حسب الحالة" data-i18n-aria="filterByCondition"></div>
+            <div class="area-items-grid" id="areaItemsBody"></div>
+        </div>
+        <div class="modal-footer area-add-bar">
+            <div class="area-add-inputs">
+                <input type="text" id="newAreaItemName" data-i18n-placeholder="itemNamePlaceholder" placeholder="اسم العنصر...">
+                <input type="number" id="newAreaItemQty" placeholder="الكمية" data-i18n-placeholder="qty" min="0" value="1" title="الكمية" data-i18n-title="quantity">
+                <input type="number" id="newAreaItemMin" placeholder="الحد الأدنى" data-i18n-placeholder="min" min="0" value="0" title="الحد الأدنى للمخزون" data-i18n-title="minStockTitle">
+                <input type="text" id="newAreaItemDesc" data-i18n-placeholder="descriptionPlaceholder" placeholder="الوصف (اختياري)">
+                <select id="newAreaItemCondition" class="area-add-condition" title="الحالة" data-i18n-title="condition" aria-label="الحالة" data-i18n-aria="condition">
+                    <option value="new" data-i18n="conditionNew">جديد</option>
+                    <option value="used" data-i18n="conditionUsed">مستعمل</option>
+                    <option value="damaged" data-i18n="conditionDamaged">تالف</option>
+                    <option value="maintenance" data-i18n="conditionMaintenance">بحاجة للصيانة</option>
+                </select>
+                <label class="area-image-upload" title="رفع صورة" data-i18n-title="uploadImage">
+                    <i class="fas fa-camera"></i>
+                    <input type="file" id="newAreaItemFile" accept="image/*">
+                </label>
+            </div>
+            <button class="btn-add-strong" onclick="addAreaItem()">
+                <i class="fas fa-plus"></i>
+                <span data-i18n="addItem">إضافة عنصر</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Covenant History Modal -->
+<div class="modal-overlay" id="covenantModal">
+    <div class="modal-content modal-md">
+        <div class="modal-header">
+            <h2>
+                <span data-i18n="covenantHistory">سجل العهدة</span>
+                <span class="covenant-item-name" id="covenantItemName"></span>
+            </h2>
+            <button class="modal-close" onclick="closeModal('covenantModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="covenantCurrentPanel" class="covenant-current-panel" style="display:none"></div>
+            <div class="covenant-timeline" id="covenantTimeline">
+                <div class="no-results" data-i18n="noItems">لا توجد عناصر بعد.</div>
+            </div>
+            <div class="covenant-transfer-form">
+                <h3 data-i18n="transferCustody">نقل العهدة</h3>
+                <div class="transfer-mode-toggle">
+                    <button type="button" class="transfer-mode-btn active" data-mode="employee" onclick="setTransferMode('employee')">
+                        <i class="fas fa-user"></i>
+                        <span data-i18n="transferToEmployee">نقل إلى موظف</span>
+                    </button>
+                    <button type="button" class="transfer-mode-btn" data-mode="department" onclick="setTransferMode('department')">
+                        <i class="fas fa-building"></i>
+                        <span data-i18n="transferToDepartment">نقل إلى قسم</span>
+                    </button>
+                    <button type="button" class="transfer-mode-btn" data-mode="swap-list" onclick="setTransferMode('swap-list')">
+                        <i class="fas fa-arrow-right-arrow-left"></i>
+                        <span id="covenantSwapLabel" data-i18n="destSwapList">تبديل نوع القائمة (عناصر ↔ معدات)</span>
+                    </button>
+                </div>
+                <div class="transfer-form-grid">
+                    <div class="form-field" id="covenantEmployeeField">
+                        <label data-i18n="employeeName">اسم الموظف</label>
+                        <select id="covenantTransferTo">
+                            <option value="" data-i18n="selectEmployee">اختر موظفاً</option>
+                        </select>
+                    </div>
+                    <div class="form-field" id="covenantDepartmentField" style="display:none">
+                        <label data-i18n="targetDepartment">القسم المستهدف</label>
+                        <select id="covenantTransferToDept">
+                            <option value="" data-i18n="selectDepartment">اختر قسماً</option>
+                        </select>
+                    </div>
+                    <div class="form-field full" id="covenantSwapField" style="display:none">
+                        <label data-i18n="selectDepartment">اختر قسماً</label>
+                        <select id="covenantSwapDept">
+                            <option value="">--</option>
+                        </select>
+                        <div class="transfer-swap-preview" style="margin-top:10px"><i class="fas fa-arrow-right-arrow-left"></i> <span id="covenantSwapPreviewText"></span></div>
+                    </div>
+                    <div class="form-field">
+                        <label data-i18n="startDate">تاريخ البداية</label>
+                        <input type="date" id="covenantTransferDate">
+                    </div>
+                    <div class="form-field">
+                        <label data-i18n="endDate">تاريخ النهاية</label>
+                        <input type="date" id="covenantTransferEndDate">
+                    </div>
+                    <div class="form-field">
+                        <label data-i18n="deviceCondition">حالة الجهاز قبل التسليم</label>
+                        <div class="condition-radio-group">
+                            <label class="condition-radio">
+                                <input type="radio" name="covenantCondition" value="good" checked="" onchange="document.getElementById('covenantConditionNotesWrap').style.display='none'">
+                                <span data-i18n="conditionGood">جيد</span>
+                            </label>
+                            <label class="condition-radio condition-radio-bad">
+                                <input type="radio" name="covenantCondition" value="not_good" onchange="document.getElementById('covenantConditionNotesWrap').style.display='block'">
+                                <span data-i18n="conditionNotGood">غير جيد</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-field full" id="covenantConditionNotesWrap" style="display:none">
+                        <label data-i18n="conditionNotes">ملاحظات الحالة</label>
+                        <input type="text" id="covenantConditionNotes" data-i18n-placeholder="conditionNotesPh" placeholder="صف حالة الجهاز...">
+                    </div>
+                    <div class="form-field full">
+                        <label data-i18n="additionalNotes">ملاحظات إضافية</label>
+                        <input type="text" id="covenantTransferNotes" data-i18n-placeholder="notes" placeholder="ملاحظات">
+                    </div>
+                </div>
+                <button class="btn-add transfer-submit-btn" onclick="transferCovenant()">
+                    <i class="fas fa-exchange-alt"></i>
+                    <span data-i18n="transferBtn">نقل</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Return to Original Department Modal (for incoming custody) -->
+<div class="modal-overlay" id="deptReturnModal">
+    <div class="modal-content modal-md">
+        <div class="modal-header">
+            <h2>
+                <i class="fas fa-undo"></i>
+                <span data-i18n="returnToOriginalDept">إرجاع إلى القسم الأصلي</span>
+                <span class="covenant-item-name" id="deptReturnItemName"></span>
+            </h2>
+            <button class="modal-close" onclick="closeModal('deptReturnModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <!-- Read-only summary block -->
+            <div class="custody-readonly-block">
+                <div class="custody-readonly-row">
+                    <label>
+                        <i class="fas fa-lock"></i>
+                        <span data-i18n="sourceDepartment">القسم المصدر</span>
+                    </label>
+                    <div class="custody-readonly-value" id="deptReturnSource">--</div>
+                </div>
+                <div class="custody-readonly-row">
+                    <label>
+                        <i class="fas fa-lock"></i>
+                        <span data-i18n="custodyPeriod">فترة العهدة</span>
+                    </label>
+                    <div class="custody-readonly-value" id="deptReturnPeriod">--</div>
+                </div>
+                <div class="custody-readonly-row">
+                    <label>
+                        <i class="fas fa-lock"></i>
+                        <span data-i18n="conditionOnReceipt">حالة الجهاز عند الاستلام</span>
+                    </label>
+                    <div class="custody-readonly-value" id="deptReturnOrigCondition">--</div>
+                </div>
+                <div class="custody-readonly-row" id="deptReturnOrigNotesRow" style="display:none">
+                    <label>
+                        <i class="fas fa-lock"></i>
+                        <span data-i18n="originalNotes">ملاحظات النقل الأصلية</span>
+                    </label>
+                    <div class="custody-readonly-value" id="deptReturnOrigNotes">--</div>
+                </div>
+            </div>
+
+            <!-- Editable return controls -->
+            <div class="custody-return-block">
+                <h3 class="custody-return-title">
+                    <i class="fas fa-undo"></i>
+                    <span data-i18n="returnToDepartment">إرجاع إلى القسم</span>
+                </h3>
+                <div class="form-field">
+                    <label data-i18n="returnCondition">حالة الجهاز عند الإرجاع</label>
+                    <div class="condition-radio-group">
+                        <label class="condition-radio">
+                            <input type="radio" name="deptReturnCondition" value="good" checked="">
+                            <span data-i18n="conditionGood">جيد</span>
+                        </label>
+                        <label class="condition-radio condition-radio-bad">
+                            <input type="radio" name="deptReturnCondition" value="not_good">
+                            <span data-i18n="conditionNotGood">غير جيد</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label data-i18n="returnNotes">ملاحظات الإرجاع</label>
+                    <textarea id="deptReturnNotes" rows="3" data-i18n-placeholder="returnNotesPh" placeholder="ملاحظات حول الإرجاع..."></textarea>
+                </div>
+                <button class="btn-add custody-return-btn" onclick="submitDeptReturn()">
+                    <i class="fas fa-undo"></i>
+                    <span data-i18n="returnToOriginalDept">إرجاع إلى القسم الأصلي</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Employee Custody Details Modal -->
+<div class="modal-overlay" id="empCustodyDetailsModal">
+    <div class="modal-content modal-md">
+        <div class="modal-header">
+            <h2>
+                <i class="fas fa-hand-holding-box"></i>
+                <span data-i18n="custodyDetails">تفاصيل العهدة</span>
+                <span class="covenant-item-name" id="empCustodyItemName"></span>
+            </h2>
+            <button class="modal-close" onclick="closeModal('empCustodyDetailsModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="empCustodyDetailsBody">
+                <!-- Read-only block: condition on receipt + period -->
+                <div class="custody-readonly-block">
+                    <div class="custody-readonly-row">
+                        <label>
+                            <i class="fas fa-lock"></i>
+                            <span data-i18n="conditionOnReceipt">حالة الجهاز عند الاستلام</span>
+                        </label>
+                        <div class="custody-readonly-value" id="empCustodyConditionView">--</div>
+                    </div>
+                    <div class="custody-readonly-row">
+                        <label>
+                            <i class="fas fa-lock"></i>
+                            <span data-i18n="custodyPeriod">فترة العهدة</span>
+                        </label>
+                        <div class="custody-readonly-value" id="empCustodyPeriodView">--</div>
+                    </div>
+                    <div class="custody-readonly-row" id="empCustodyOriginalNotesRow" style="display:none">
+                        <label>
+                            <i class="fas fa-lock"></i>
+                            <span data-i18n="originalNotes">ملاحظات النقل الأصلية</span>
+                        </label>
+                        <div class="custody-readonly-value" id="empCustodyOriginalNotesView">--</div>
+                    </div>
+                    <div class="custody-readonly-row" id="empCustodyFromDeptRow" style="display:none">
+                        <label>
+                            <i class="fas fa-lock"></i>
+                            <span data-i18n="originalDepartment">القسم الأصلي</span>
+                        </label>
+                        <div class="custody-readonly-value" id="empCustodyFromDeptView">--</div>
+                    </div>
+                </div>
+
+                <!-- Editable: return controls -->
+                <div class="custody-return-block">
+                    <h3 class="custody-return-title">
+                        <i class="fas fa-undo"></i>
+                        <span data-i18n="returnToDepartment">إرجاع إلى القسم</span>
+                    </h3>
+                    <div class="form-field">
+                        <label data-i18n="returnCondition">حالة الجهاز عند الإرجاع</label>
+                        <div class="condition-radio-group">
+                            <label class="condition-radio">
+                                <input type="radio" name="empReturnCondition" value="good" checked="">
+                                <span data-i18n="conditionGood">جيد</span>
+                            </label>
+                            <label class="condition-radio condition-radio-bad">
+                                <input type="radio" name="empReturnCondition" value="not_good">
+                                <span data-i18n="conditionNotGood">غير جيد</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label data-i18n="returnNotes">ملاحظات الإرجاع</label>
+                        <textarea id="empReturnNotes" rows="3" data-i18n-placeholder="returnNotesPh" placeholder="ملاحظات حول الإرجاع..."></textarea>
+                    </div>
+                    <button class="btn-add custody-return-btn" onclick="submitReturnCustody()">
+                        <i class="fas fa-undo"></i>
+                        <span data-i18n="returnToDepartmentBtn">إرجاع إلى القسم</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Employee Custody Item Edit Modal (qty / date / condition) -->
+<div class="modal-overlay" id="empItemEditModal">
+    <div class="modal-content modal-md">
+        <div class="modal-header">
+            <h2>
+                <i class="fas fa-pen" style="margin-right:8px;color:var(--accent)"></i>
+                <span data-i18n="editCustodyItem">تعديل عنصر العهدة</span>
+                <span class="covenant-item-name" id="empItemEditName"> — قلم شاشة رقم 4</span>
+            </h2>
+            <button class="modal-close" onclick="closeModal('empItemEditModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="transfer-form-grid">
+                <div class="form-field">
+                    <label data-i18n="qty">الكمية</label>
+                    <input type="number" id="empItemEditQty" min="1" step="1">
+                </div>
+                <div class="form-field">
+                    <label data-i18n="receiptDate">تاريخ الاستلام</label>
+                    <input type="date" id="empItemEditDate">
+                </div>
+                <div class="form-field">
+                    <label data-i18n="returnDate">تاريخ الارجاع</label>
+                    <input type="date" id="empItemEditEndDate">
+                </div>
+                <div class="form-field full">
+                    <label data-i18n="deviceCondition">حالة الجهاز قبل التسليم</label>
+                    <select id="empItemEditCondition">
+                        <option value="new" data-i18n="conditionNew">جديد</option>
+                        <option value="used" data-i18n="conditionUsed">مستعمل</option>
+                        <option value="repairable" data-i18n="conditionRepairable">قابلة للصيانة</option>
+                        <option value="maintenance" data-i18n="conditionMaintenance">بحاجة للصيانة</option>
+                        <option value="damaged" data-i18n="conditionDamaged">تالف</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn-add transfer-submit-btn" onclick="saveEmpItemEdit()">
+                <i class="fas fa-check"></i> <span data-i18n="save">حفظ</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Move Custody Item to Temporary Custody -->
+<div class="modal-overlay" id="moveToTempCustodyModal">
+    <div class="modal-content modal-md">
+        <div class="modal-header">
+            <h2>
+                <i class="fas fa-exchange-alt" style="margin-right:8px;color:var(--accent)"></i>
+                <span data-i18n="move">نقل</span>
+                <span class="covenant-item-name" id="moveTempCustodyItemName"></span>
+            </h2>
+            <button class="modal-close" onclick="closeModal('moveToTempCustodyModal')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="transfer-mode-toggle">
+                <button type="button" class="transfer-mode-btn active" data-mode="department" onclick="setMoveTempCustodyDest('department')"><i class="fas fa-building"></i> <span data-i18n="department">القسم</span></button>
+                <button type="button" class="transfer-mode-btn" data-mode="employee" onclick="setMoveTempCustodyDest('employee')"><i class="fas fa-user"></i> <span data-i18n="employeeName">اسم الموظف</span></button>
+                <button type="button" class="transfer-mode-btn" data-mode="locker" onclick="setMoveTempCustodyDest('locker')"><i class="fas fa-box-open"></i> <span data-i18n="locker">خزانة</span></button>
+                <button type="button" class="transfer-mode-btn" data-mode="warehouse" onclick="setMoveTempCustodyDest('warehouse')"><i class="fas fa-warehouse"></i> <span data-i18n="warehouse">المستودع</span></button>
+            </div>
+            <div class="transfer-form-grid">
+                <div class="form-field" id="moveTempCustodyDeptField">
+                    <label data-i18n="targetDepartment">القسم المستهدف</label>
+                    <select id="moveTempCustodyDeptSel"></select>
+                </div>
+                <div class="form-field" id="moveTempCustodyEmpField" style="display:none">
+                    <label data-i18n="employeeName">اسم الموظف</label>
+                    <select id="moveTempCustodyEmpSel"></select>
+                </div>
+                <div class="form-field" id="moveTempCustodyLockerField" style="display:none">
+                    <label data-i18n="targetLocker">الخزانة المستهدفة</label>
+                    <select id="moveTempCustodyLockerSel"></select>
+                </div>
+                <div class="form-field" id="moveTempCustodyZoneField" style="display:none">
+                    <label data-i18n="targetZone">المنطقة المستهدفة</label>
+                    <select id="moveTempCustodyZoneSel" onchange="onMoveTempCustodyZoneChange()"></select>
+                </div>
+                <div class="form-field" id="moveTempCustodyAreaField" style="display:none">
+                    <label data-i18n="targetArea">المساحة المستهدفة</label>
+                    <select id="moveTempCustodyAreaSel"></select>
+                </div>
+                <div class="form-field">
+                    <label data-i18n="qty">الكمية</label> <span class="custody-qty-hint" id="moveTempCustodyQtyHint"></span>
+                    <input type="number" id="moveTempCustodyQty" min="1" step="1">
+                </div>
+                <div class="form-field">
+                    <label data-i18n="condition">الحالة</label>
+                    <select id="moveTempCustodyCondition">
+                        <option value="new" data-i18n="conditionNew">جديد</option>
+                        <option value="used" data-i18n="conditionUsed">مستعمل</option>
+                        <option value="repairable" data-i18n="conditionRepairable">قابلة للصيانة</option>
+                        <option value="maintenance" data-i18n="conditionMaintenance">بحاجة للصيانة</option>
+                        <option value="damaged" data-i18n="conditionDamaged">تالف</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn-add transfer-submit-btn" onclick="confirmMoveToTempCustody()">
+                <i class="fas fa-check"></i> <span data-i18n="move">نقل</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- All Department Equipment Panel -->
+<div class="modal-overlay" id="allDeptEquipPanel">
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h2><i class="fas fa-tools"></i> <span data-i18n="allEquipment">جميع المعدات</span></h2>
+            <button class="modal-close" onclick="closeModal('allDeptEquipPanel')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="all-equip-grid" id="allDeptEquipBody"></div>
+        </div>
+    </div>
+</div>
+
+<!-- All Custody Items Panel -->
+<div class="modal-overlay" id="allCustodyPanel">
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h2><i class="fas fa-hand-holding"></i> <span data-i18n="custodyItems">عناصر العهدة</span></h2>
+            <div class="modal-header-actions">
+                <button class="btn-print-icon" onclick="printAllCustodyItems()" title="طباعة جميع عناصر العهدة" data-i18n-title="printAllCustodyTitle">
+                    <i class="fas fa-print"></i>
+                </button>
+                <button class="modal-close" onclick="closeModal('allCustodyPanel')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div class="all-custody-grid" id="allCustodyBody"></div>
+        </div>
+    </div>
+</div>
+
+<!-- User Create/Edit Modal (Manager only) -->
+<div class="modal-overlay" id="userModal">
+    <div class="modal" style="max-width: 460px;">
+        <div class="modal-header">
+            <h2 id="userModalTitle">Add User</h2>
+            <button class="modal-close" onclick="closeModal('userModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="userModalId" value="">
+            <div class="user-form-field">
+                <label data-i18n="username">اسم المستخدم</label>
+                <input type="text" id="userModalUsername" placeholder="مثال: alice" data-i18n-placeholder="usernameExample" autocomplete="off">
+            </div>
+            <div class="user-form-field" id="userModalPasswordWrap">
+                <label><span data-i18n="password">كلمة المرور</span> <span style="color:rgba(255,255,255,0.4); font-weight:400;" data-i18n="passwordHint">(٦ أحرف على الأقل)</span></label>
+                <input type="password" id="userModalPassword" placeholder="" autocomplete="new-password">
+            </div>
+            <div class="user-form-field">
+                <label data-i18n="role">الصلاحية</label>
+                <select id="userModalRole" onchange="onUserRoleChange()">
+                    <option value="employee" data-i18n="roleEmployee">موظف — تعديل ضمن قسمه فقط</option>
+                    <option value="admin" data-i18n="roleAdmin">مشرف — عرض شامل وإضافة في الأقسام</option>
+                    <option value="manager" data-i18n="roleManager">مدير — صلاحية كاملة</option>
+                </select>
+            </div>
+            <div class="user-form-field">
+                <label><span data-i18n="linkedEmployee">الموظف المرتبط</span> <span style="color:rgba(255,255,255,0.4); font-weight:400;" data-i18n="linkedEmpHint">(اختياري)</span></label>
+                <select id="userModalEmployee"><option value="" data-i18n="none">— لا شيء —</option></select>
+            </div>
+            <div class="user-form-field" id="userModalDeptWrap">
+                <label><span data-i18n="departmentScope">نطاق القسم</span> <span style="color:rgba(255,255,255,0.4); font-weight:400;" data-i18n="deptScopeHint">(يُستخدم إذا لم يُربط موظف)</span></label>
+                <select id="userModalDepartment"><option value="" data-i18n="none">— لا شيء —</option></select>
+            </div>
+            <div class="user-form-field">
+                <label class="user-form-checkbox">
+                    <input type="checkbox" id="userModalActive" checked="">
+                    <span data-i18n="active">نشط</span>
+                </label>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeModal('userModal')" data-i18n="cancel">إلغاء</button>
+            <button class="btn-primary" onclick="saveUser()" data-i18n="save">حفظ</button>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal-overlay" id="resetPwModal">
+    <div class="modal" style="max-width: 420px;">
+        <div class="modal-header">
+            <h2 data-i18n="resetPassword">إعادة تعيين كلمة المرور</h2>
+            <button class="modal-close" onclick="closeModal('resetPwModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="resetPwUserId" value="">
+            <p style="margin-bottom: 14px; color: rgba(255,255,255,0.65); font-size: 13.5px;">
+                <span data-i18n="settingNewPassword">تعيين كلمة مرور جديدة لـ</span> <strong id="resetPwUsername"></strong>.
+            </p>
+            <div class="user-form-field">
+                <label><span data-i18n="newPassword">كلمة مرور جديدة</span> <span style="color:rgba(255,255,255,0.4); font-weight:400;" data-i18n="passwordHint">(٦ أحرف على الأقل)</span></label>
+                <input type="password" id="resetPwValue" autocomplete="new-password">
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeModal('resetPwModal')" data-i18n="cancel">إلغاء</button>
+            <button class="btn-primary" onclick="confirmResetPassword()" data-i18n="reset">إعادة تعيين</button>
+        </div>
+    </div>
+</div>
+
+<!-- Item Custody Modal (locker + warehouse items) -->
+<div class="modal-overlay" id="itemCustodyModal">
+    <div class="modal-content modal-md">
+        <div class="modal-header">
+            <h2>
+                <i class="fas fa-hand-holding" style="margin-right:8px;color:var(--accent)"></i>
+                <span data-i18n="transferCustody">نقل العهدة</span>
+                <span class="covenant-item-name" id="itemCustodyItemName"> — قلم شاشة رقم 1</span>
+            </h2>
+            <div class="modal-header-actions">
+                <button class="btn-print-icon" onclick="printItemCustodyHistory()" title="طباعة" data-i18n-title="printBtn">
+                    <i class="fas fa-print"></i>
+                </button>
+                <button class="modal-close" onclick="closeModal('itemCustodyModal')"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div id="itemCurrentCustodyPanel" class="covenant-current-panel" style="display: none;"></div>
+            <div class="covenant-timeline" id="itemCustodyTimeline" style="max-height:180px;overflow-y:auto;margin-bottom:16px"></div>
+            <div class="covenant-transfer-form" id="itemCustodyForm">
+                <h3 data-i18n="transferCustody">نقل العهدة</h3>
+                <div class="transfer-mode-toggle">
+                    <button type="button" class="transfer-mode-btn active" data-mode="employee" onclick="setItemCustodyMode('employee')"><i class="fas fa-user"></i> <span data-i18n="transferToEmployee">نقل إلى موظف</span></button>
+                    <button type="button" class="transfer-mode-btn" data-mode="department" onclick="setItemCustodyMode('department')"><i class="fas fa-building"></i> <span data-i18n="transferToDepartment">نقل إلى قسم</span></button>
+                </div>
+                <div class="transfer-form-grid">
+                    <div class="form-field" id="itemCustodyEmpField">
+                        <label data-i18n="employeeName">اسم الموظف</label>
+                        <select id="itemCustodyEmpSel"><option value="">اختر موظفاً</option></select>
+                    </div>
+                    <div class="form-field" id="itemCustodyDeptField" style="display:none">
+                        <label data-i18n="targetDepartment">القسم المستهدف</label>
+                        <select id="itemCustodyDeptSel"><option value="">اختر قسماً</option></select>
+                    </div>
+                    <div class="form-field" id="itemCustodyQtyField" style="">
+                        <label data-i18n="qty">الكمية</label> <span class="custody-qty-hint" id="itemCustodyQtyHint">(المخزون: 1)</span>
+                        <input type="number" id="itemCustodyQty" min="1" step="1" max="1">
+                    </div>
+                    <div class="form-field">
+                        <label data-i18n="startDate">تاريخ البداية</label>
+                        <input type="date" id="itemCustodyStart">
+                    </div>
+                    <div class="form-field">
+                        <label data-i18n="endDate">تاريخ النهاية</label>
+                        <input type="date" id="itemCustodyEnd">
+                    </div>
+                    <div class="form-field full">
+                        <label data-i18n="deviceCondition">حالة الجهاز قبل التسليم</label>
+                        <div class="condition-radio-group">
+                            <label class="condition-radio"><input type="radio" name="itemCustodyCond" value="good" checked="" onchange="document.getElementById('itemCustodyCondNotesWrap').style.display='none'"> <span data-i18n="conditionGood">جيد</span></label>
+                            <label class="condition-radio condition-radio-bad"><input type="radio" name="itemCustodyCond" value="not_good" onchange="document.getElementById('itemCustodyCondNotesWrap').style.display='block'"> <span data-i18n="conditionNotGood">غير جيد</span></label>
+                        </div>
+                    </div>
+                    <div class="form-field full" id="itemCustodyCondNotesWrap" style="display:none">
+                        <label data-i18n="conditionNotes">ملاحظات الحالة</label>
+                        <input type="text" id="itemCustodyCondNotes" placeholder="">
+                    </div>
+                    <div class="form-field full">
+                        <label data-i18n="additionalNotes">ملاحظات إضافية</label>
+                        <input type="text" id="itemCustodyNotes" placeholder="">
+                    </div>
+                </div>
+                <button class="btn-add transfer-submit-btn" onclick="submitItemCustodyTransfer()">
+                    <i class="fas fa-exchange-alt"></i> <span data-i18n="transferBtn">نقل</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="api.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
