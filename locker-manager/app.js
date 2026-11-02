@@ -363,7 +363,7 @@ const i18n = {
 // ============ State ============
 let currentPage = 'home';
 let currentLockerId = null, currentLockerData = null, currentView = 'list';
-let currentLang = localStorage.getItem('lang') || 'en';
+let currentLang = localStorage.getItem('lang') || 'ar';
 let currentTheme = localStorage.getItem('theme') || 'dark';
 let highlightItemId = null;
 let currentZoneId = null, currentZoneData = null;
