@@ -1,5 +1,6 @@
 @import url('/styles-base.css');
 @import url('/styles-mobile.css');
+@import url('/styles-extra.css');
 
 /* Final mobile navigation: logout must be on the LEFT */
 @media (max-width:900px){
