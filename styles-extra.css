@@ -71,3 +71,6 @@ h4.sub{margin:6px 0 12px;font-size:15px;color:#172033}
   .doc-table tr,.day-block,.doc-imgs figure{break-inside:avoid}
   .doc-sec>h3,.doc h4{break-after:avoid}
 }
+
+/* حقول الإدخال داخل label ترث الخط العريض: نخففه */
+label input,label textarea,label select{font-weight:500}
